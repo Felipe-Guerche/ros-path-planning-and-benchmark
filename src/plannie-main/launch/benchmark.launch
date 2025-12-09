@@ -1,0 +1,22 @@
+<launch>
+    <!-- Benchmark Parameters -->
+    <arg name="planner" default="astar" />
+    <arg name="goal_x" default="36.0" />
+    <arg name="goal_y" default="32.0" />
+    
+    <!-- Start Simulation (Using existing launch from internal packages via main.sh logic but directly) -->
+    <!-- The main.sh script sets up user_config and then launches a tailored launch file. 
+         Ideally, we should rely on main.sh to start the sim, then launch this benchmark. 
+         But to automate, we can try to include a simplified launch or assume sim is running. 
+         
+         For now, let's assume this launch file STARTS the benchmark node. 
+         The user typically launches sim first. 
+    -->
+
+    <node pkg="plannie" type="benchmark_manager.py" name="benchmark_manager" output="screen">
+        <param name="output_dir" value="$(find plannie)/results" />
+        <param name="planner_name" value="$(arg planner)" />
+        <param name="goal_x" value="$(arg goal_x)" />
+        <param name="goal_y" value="$(arg goal_y)" />
+    </node>
+</launch>
