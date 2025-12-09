@@ -3,8 +3,7 @@
 # Suppress Warnings
 export ROS_PYTHON_WARNINGS="ignore"
 export GAZEBO_ROS_CMD_WARNINGS="0"
-export disable_ros1_eol_warnnings="1" # As requested by user
-export ROS_NOETIC_EOL_WARNING="0" # Potential variant
+export DISABLE_ROS1_EOL_WARNINGS="1" # Correct variable from error message
 
 # Configuration
 PLANNERS=("astar" "hybrid_astar" "dijkstra" "lazy_theta_star" "dstar_lite" "rrt")
