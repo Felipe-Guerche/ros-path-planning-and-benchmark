@@ -189,10 +189,23 @@ class BenchmarkManager:
         try:
             with open(filepath, 'a') as f:
                 if not file_exists:
-                    f.write("Planner,Status,Time(s),Distance(m),CPU(%),Memory(%)\n")
+                    # Header matches run_battery.sh: Scenario,GlobalPlanner,LocalPlanner,Status,Time(s),Distance(m),CPU(%),Memory(%)
+                    f.write("Scenario,GlobalPlanner,LocalPlanner,Status,Time(s),Distance(m),CPU(%),Memory(%)\n")
                 
                 status_str = "SUCCESS" if success else "FAILURE"
-                f.write(f"{self.planner_name},{status_str},{time_taken:.4f},{total_dist:.4f},{avg_cpu:.2f},{max_mem:.2f}\n")
+                
+                # Split planner_name (e.g., "static_hybrid_astar_dwa") into components
+                # Assumption: scenario is first, local is last. Middle is global (can have underscores).
+                parts = self.planner_name.split('_')
+                if len(parts) >= 3:
+                    scenario = parts[0]
+                    local = parts[-1]
+                    global_p = "_".join(parts[1:-1])
+                    f.write(f"{scenario},{global_p},{local},{status_str},{time_taken:.4f},{total_dist:.4f},{avg_cpu:.2f},{max_mem:.2f}\n")
+                else:
+                    # Fallback for manual single runs or unexpected formats
+                    f.write(f"{self.planner_name},,{status_str},{time_taken:.4f},{total_dist:.4f},{avg_cpu:.2f},{max_mem:.2f}\n")
+                    
                 rospy.loginfo(f"Added to summary: {filepath}")
         except Exception as e:
             rospy.logerr(f"Failed to write to summary file: {e}")
