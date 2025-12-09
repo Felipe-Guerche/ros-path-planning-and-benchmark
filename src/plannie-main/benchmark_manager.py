@@ -36,6 +36,11 @@ class BenchmarkManager:
         self.client.wait_for_server()
         rospy.loginfo("Connected to move_base server")
         
+        # Move Base Process
+        self.move_base_proc = self.find_move_base_process()
+        if not self.move_base_proc:
+            rospy.logwarn("Could not find move_base process! Resource monitoring will be system-wide.")
+        
         # Publishers
         self.vis_pub = rospy.Publisher('/benchmark_goal', PoseStamped, queue_size=1)
         
@@ -51,6 +56,20 @@ class BenchmarkManager:
         rospy.sleep(1.0)
         self.start_benchmark()
         
+    def find_move_base_process(self):
+        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            try:
+                # check name or cmdline
+                if proc.info['name'] == 'move_base':
+                    return proc
+                # sometimes it's a python script wrapper or similar, but move_base is usually C++
+                # check cmdline for 'move_base'
+                if proc.info['cmdline'] and any('move_base' in arg for arg in proc.info['cmdline']):
+                    return proc
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                pass
+        return None
+
     def wait_for_sim_time(self, target_time):
         rospy.loginfo(f"Waiting for simulation time to reach {target_time}s...")
         rate = rospy.Rate(10)
@@ -67,6 +86,10 @@ class BenchmarkManager:
         self.is_running = True
         self.start_time = time.time()
         
+        # Reset process CPU interval
+        if self.move_base_proc:
+            self.move_base_proc.cpu_percent(interval=None)
+
         # Create Goal Object
         goal_pose = PoseStamped()
         goal_pose.header.frame_id = "map"
@@ -109,8 +132,19 @@ class BenchmarkManager:
         self.trajectory.append(current_pos)
         
         # Resource Monitoring
-        self.cpu_usages.append(psutil.cpu_percent())
-        self.mem_usages.append(psutil.virtual_memory().percent)
+        if self.move_base_proc:
+            try:
+                # CPU percent for specific process (non-blocking if interval=None after first call)
+                self.cpu_usages.append(self.move_base_proc.cpu_percent(interval=None))
+                # Memory percent of the process
+                self.mem_usages.append(self.move_base_proc.memory_percent())
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                self.cpu_usages.append(0.0)
+                self.mem_usages.append(0.0)
+        else:
+            # Fallback to system-wide if not found
+            self.cpu_usages.append(psutil.cpu_percent())
+            self.mem_usages.append(psutil.virtual_memory().percent)
             
     def finish_benchmark(self, success):
         self.finished = True
