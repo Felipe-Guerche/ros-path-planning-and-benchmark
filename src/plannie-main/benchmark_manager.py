@@ -150,13 +150,26 @@ class BenchmarkManager:
         # Calculate distance to GOAL (final target), not just path integration
         dist_to_goal = math.sqrt((x - self.goal_x)**2 + (y - self.goal_y)**2)
         
-        # Tolerance: 0.3m (30cm radius)
+        # Force Success Check (Fallback for picky move_base)
+        # Calculate distance to GOAL (final target), not just path integration
+        dist_to_goal = math.sqrt((x - self.goal_x)**2 + (y - self.goal_y)**2)
+        
+        # Tolerance: 0.1m (10cm radius) - Stricter as requested
         # If we are close enough, declare victory.
-        if dist_to_goal < 0.30:
-            rospy.loginfo(f"Vehicle is within 0.30m of goal ({dist_to_goal:.3f}m). Forcing SUCCESS.")
+        if dist_to_goal < 0.10:
+            rospy.loginfo(f"Vehicle is within 0.10m of goal ({dist_to_goal:.3f}m). Forcing SUCCESS.")
             self.client.cancel_all_goals()
             self.finish_benchmark(True)
-            
+            return
+
+        # Timeout Check
+        # Check against a max_timeout param (default 180s = 3 mins)
+        max_timeout = rospy.get_param('~max_timeout', 180.0)
+        if (time.time() - self.start_time) > max_timeout:
+            rospy.logwarn(f"Benchmark timed out after {max_timeout}s!")
+            self.client.cancel_all_goals()
+            self.finish_benchmark(False)
+
     def finish_benchmark(self, success):
         self.finished = True
         end_time = time.time()

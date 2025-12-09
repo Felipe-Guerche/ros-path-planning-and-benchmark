@@ -5,7 +5,10 @@
     <arg name="goal_y" default="32.0" />
     <arg name="output_dir" default="$(find plannie)/results" />
     <arg name="summary_file" default="" />
-    
+    <arg name="target_startup_time" default="0.0" />
+    <arg name="max_timeout" default="180.0" />
+
+    <!-- Benchmark Manager Node -->
     <!-- Start Simulation (Using existing launch from internal packages via main.sh logic but directly) -->
     <!-- The main.sh script sets up user_config and then launches a tailored launch file. 
          Ideally, we should rely on main.sh to start the sim, then launch this benchmark. 
@@ -22,5 +25,6 @@
         <param name="goal_y" value="$(arg goal_y)" />
         <param name="summary_file" value="$(arg summary_file)" />
         <param name="target_startup_time" value="$(arg target_startup_time)" />
+        <param name="max_timeout" value="$(arg max_timeout)" />
     </node>
 </launch>
