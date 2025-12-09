@@ -3,6 +3,8 @@
     <arg name="planner" default="astar" />
     <arg name="goal_x" default="36.0" />
     <arg name="goal_y" default="32.0" />
+    <arg name="output_dir" default="$(find plannie)/results" />
+    <arg name="summary_file" default="" />
     
     <!-- Start Simulation (Using existing launch from internal packages via main.sh logic but directly) -->
     <!-- The main.sh script sets up user_config and then launches a tailored launch file. 
@@ -14,9 +16,10 @@
     -->
 
     <node pkg="plannie" type="benchmark_manager.py" name="benchmark_manager" output="screen">
-        <param name="output_dir" value="$(find plannie)/results" />
+        <param name="output_dir" value="$(arg output_dir)" />
         <param name="planner_name" value="$(arg planner)" />
         <param name="goal_x" value="$(arg goal_x)" />
         <param name="goal_y" value="$(arg goal_y)" />
+        <param name="summary_file" value="$(arg summary_file)" />
     </node>
 </launch>

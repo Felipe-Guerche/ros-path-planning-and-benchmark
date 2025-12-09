@@ -129,9 +129,31 @@ class BenchmarkManager:
                 
         rospy.loginfo(f"Results saved to {filepath}")
 
+        # Save to unified summary if configured
+        summary_file = rospy.get_param('~summary_file', '')
+        if summary_file:
+            self.save_to_summary(summary_file, success, time_taken, self.total_distance, avg_cpu, max_mem)
+
+    def save_to_summary(self, filepath, success, time_taken, total_dist, avg_cpu, max_mem):
+        file_exists = os.path.isfile(filepath)
+        try:
+            with open(filepath, 'a') as f:
+                if not file_exists:
+                    f.write("Planner,Status,Time(s),Distance(m),CPU(%),Memory(%)\n")
+                
+                status_str = "SUCCESS" if success else "FAILURE"
+                f.write(f"{self.planner_name},{status_str},{time_taken:.4f},{total_dist:.4f},{avg_cpu:.2f},{max_mem:.2f}\n")
+                rospy.loginfo(f"Added to summary: {filepath}")
+        except Exception as e:
+            rospy.logerr(f"Failed to write to summary file: {e}")
+
+    def shutdown_hook(self):
+        pass # Placeholder for any cleanup if needed
+
 if __name__ == '__main__':
     try:
-        BenchmarkManager()
+        manager = BenchmarkManager()
+        rospy.on_shutdown(manager.shutdown_hook)
         rospy.spin()
     except rospy.ROSInterruptException:
         pass
