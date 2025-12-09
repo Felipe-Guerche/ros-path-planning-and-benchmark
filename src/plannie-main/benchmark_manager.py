@@ -37,7 +37,7 @@ class BenchmarkManager:
         rospy.loginfo("Connected to move_base server")
         
         # Publishers
-        self.vis_pub = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size=1)
+        self.vis_pub = rospy.Publisher('/benchmark_goal', PoseStamped, queue_size=1)
         
         # Subscribers
         rospy.Subscriber('/odom', Odometry, self.odom_callback)
