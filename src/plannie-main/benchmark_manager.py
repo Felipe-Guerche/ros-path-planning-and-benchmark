@@ -132,7 +132,7 @@ class BenchmarkManager:
         # Save to unified summary if configured
         summary_file = rospy.get_param('~summary_file', '')
         if summary_file:
-            self.save_to_summary(summary_file, success, time_taken, self.total_distance, avg_cpu, max_mem)
+            self.save_to_summary(summary_file, success, duration, self.total_distance, avg_cpu, max_mem)
 
     def save_to_summary(self, filepath, success, time_taken, total_dist, avg_cpu, max_mem):
         file_exists = os.path.isfile(filepath)
