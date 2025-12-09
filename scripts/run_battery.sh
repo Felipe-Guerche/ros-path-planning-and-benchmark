@@ -42,10 +42,11 @@ for scenario in "${SCENARIOS[@]}"; do
             
             if [ "$scenario" == "dynamic" ]; then
                 # Enable pedestrians (uncomment)
-                sed -i 's/# pedestrians: "pedestrian_config.yaml"/pedestrians: "pedestrian_config.yaml"/' "$CONFIG_FILE"
+                # Matches valid indentation, optional #, then pedestrians:... key
+                sed -i 's/.*pedestrians: "pedestrian_config.yaml"/  pedestrians: "pedestrian_config.yaml"/' "$CONFIG_FILE"
             else
                 # Disable pedestrians (comment)
-                sed -i 's/^  pedestrians: "pedestrian_config.yaml"/  # pedestrians: "pedestrian_config.yaml"/' "$CONFIG_FILE"
+                sed -i 's/.*pedestrians: "pedestrian_config.yaml"/  # pedestrians: "pedestrian_config.yaml"/' "$CONFIG_FILE"
             fi
             
             # 2. Cleanup
