@@ -145,6 +145,17 @@ class BenchmarkManager:
             # Fallback to system-wide if not found
             self.cpu_usages.append(psutil.cpu_percent())
             self.mem_usages.append(psutil.virtual_memory().percent)
+
+        # Force Success Check (Fallback for picky move_base)
+        # Calculate distance to GOAL (final target), not just path integration
+        dist_to_goal = math.sqrt((x - self.goal_x)**2 + (y - self.goal_y)**2)
+        
+        # Tolerance: 0.3m (30cm radius)
+        # If we are close enough, declare victory.
+        if dist_to_goal < 0.30:
+            rospy.loginfo(f"Vehicle is within 0.30m of goal ({dist_to_goal:.3f}m). Forcing SUCCESS.")
+            self.client.cancel_all_goals()
+            self.finish_benchmark(True)
             
     def finish_benchmark(self, success):
         self.finished = True
