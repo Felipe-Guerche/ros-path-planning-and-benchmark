@@ -21,5 +21,6 @@
         <param name="goal_x" value="$(arg goal_x)" />
         <param name="goal_y" value="$(arg goal_y)" />
         <param name="summary_file" value="$(arg summary_file)" />
+        <param name="target_startup_time" value="$(arg target_startup_time)" />
     </node>
 </launch>

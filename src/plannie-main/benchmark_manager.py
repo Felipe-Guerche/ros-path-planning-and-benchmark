@@ -42,9 +42,25 @@ class BenchmarkManager:
         # Subscribers
         rospy.Subscriber('/odom', Odometry, self.odom_callback)
         
+        # Synchronized Start
+        target_time = rospy.get_param('~target_startup_time', 0.0)
+        if target_time > 0:
+            self.wait_for_sim_time(target_time)
+        
         # Start Benchmark
         rospy.sleep(1.0)
         self.start_benchmark()
+        
+    def wait_for_sim_time(self, target_time):
+        rospy.loginfo(f"Waiting for simulation time to reach {target_time}s...")
+        rate = rospy.Rate(10)
+        while not rospy.is_shutdown():
+            current_time = rospy.Time.now().to_sec()
+            if current_time >= target_time:
+                rospy.loginfo(f"Target time reached! (Current: {current_time:.2f}s)")
+                break
+            # Warn if we are close to timeout or something? No, just wait.
+            rate.sleep()
         
     def start_benchmark(self):
         rospy.loginfo(f"Starting benchmark for planner: {self.planner_name}")

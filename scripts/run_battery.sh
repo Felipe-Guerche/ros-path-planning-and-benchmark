@@ -6,11 +6,16 @@ export GAZEBO_ROS_CMD_WARNINGS="0"
 export DISABLE_ROS1_EOL_WARNINGS="1" # Correct variable from error message
 
 # Configuration
+# Uncomment the planners you want to run
 GLOBAL_PLANNERS=("astar" "hybrid_astar" "dijkstra" "lazy_theta_star" "dstar_lite" "rrt")
 LOCAL_PLANNERS=("dwa" "apf")
-SCENARIOS=("static" "dynamic")
+
+# Scenarios: "static" and/or "dynamic"
+# SCENARIOS=("static" "dynamic")
+SCENARIOS=("dynamic") # Running only dynamic as requested
 GOAL_X="8.5"
 GOAL_Y="-4.0"
+START_TIME="45.0" # Simulation time to send goal (synchronization)
 CONFIG_FILE="../src/user_config/user_config.yaml"
 SUMMARY_FILE="$(pwd)/../src/plannie-main/results/battery_summary_$(date +%Y%m%d_%H%M%S).csv"
 
@@ -91,7 +96,7 @@ for scenario in "${SCENARIOS[@]}"; do
             
             # 5. Run Benchmark (Pass composite planner name for logging)
             echo "[5/5] Executing Benchmark Test..."
-            roslaunch plannie benchmark.launch planner:="${scenario}_${global}_${local}" goal_x:=$GOAL_X goal_y:=$GOAL_Y summary_file:=$SUMMARY_FILE
+            roslaunch plannie benchmark.launch planner:="${scenario}_${global}_${local}" goal_x:=$GOAL_X goal_y:=$GOAL_Y summary_file:=$SUMMARY_FILE target_startup_time:=$START_TIME
             
             echo ">>> Finished: ${scenario}_${global}_${local}"
             echo "------------------------------------------"
