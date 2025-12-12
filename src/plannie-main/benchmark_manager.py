@@ -27,6 +27,7 @@ class BenchmarkManager:
         self.trajectory = []
         self.cpu_usages = []
         self.mem_usages = []
+        self.mem_usages_mb = []
         self.is_running = False
         self.finished = False
         
@@ -138,13 +139,17 @@ class BenchmarkManager:
                 self.cpu_usages.append(self.move_base_proc.cpu_percent(interval=None))
                 # Memory percent of the process
                 self.mem_usages.append(self.move_base_proc.memory_percent())
+                # Memory RSS in MB
+                self.mem_usages_mb.append(self.move_base_proc.memory_info().rss / (1024 * 1024))
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 self.cpu_usages.append(0.0)
                 self.mem_usages.append(0.0)
+                self.mem_usages_mb.append(0.0)
         else:
             # Fallback to system-wide if not found
             self.cpu_usages.append(psutil.cpu_percent())
             self.mem_usages.append(psutil.virtual_memory().percent)
+            self.mem_usages_mb.append(psutil.virtual_memory().used / (1024 * 1024))
 
         # Force Success Check (Fallback for picky move_base)
         # Calculate distance to GOAL (final target), not just path integration
@@ -189,6 +194,7 @@ class BenchmarkManager:
         
         avg_cpu = sum(self.cpu_usages) / len(self.cpu_usages) if self.cpu_usages else 0
         max_mem = max(self.mem_usages) if self.mem_usages else 0
+        max_mem_mb = max(self.mem_usages_mb) if self.mem_usages_mb else 0
         
         with open(filepath, 'w') as f:
             f.write(f"Planner: {self.planner_name}\n")
@@ -197,6 +203,7 @@ class BenchmarkManager:
             f.write(f"Distance: {self.total_distance:.4f} m\n")
             f.write(f"Avg CPU: {avg_cpu:.2f} %\n")
             f.write(f"Max Mem: {max_mem:.2f} %\n")
+            f.write(f"Max Mem: {max_mem_mb:.2f} MiB\n")
             f.write("Trajectory:\n")
             for p in self.trajectory:
                 f.write(f"{p[0]}, {p[1]}\n")
@@ -206,15 +213,15 @@ class BenchmarkManager:
         # Save to unified summary if configured
         summary_file = rospy.get_param('~summary_file', '')
         if summary_file:
-            self.save_to_summary(summary_file, success, duration, self.total_distance, avg_cpu, max_mem)
+            self.save_to_summary(summary_file, success, duration, self.total_distance, avg_cpu, max_mem, max_mem_mb)
 
-    def save_to_summary(self, filepath, success, time_taken, total_dist, avg_cpu, max_mem):
+    def save_to_summary(self, filepath, success, time_taken, total_dist, avg_cpu, max_mem, max_mem_mb):
         file_exists = os.path.isfile(filepath)
         try:
             with open(filepath, 'a') as f:
                 if not file_exists:
-                    # Header matches run_battery.sh: Scenario,GlobalPlanner,LocalPlanner,Status,Time(s),Distance(m),CPU(%),Memory(%)
-                    f.write("Scenario,GlobalPlanner,LocalPlanner,Status,Time(s),Distance(m),CPU(%),Memory(%)\n")
+                    # Header matches run_battery.sh: Scenario,GlobalPlanner,LocalPlanner,Status,Time(s),Distance(m),CPU(%),Memory(%),Memory(MiB),TotalRAM(GiB)
+                    f.write("Scenario,GlobalPlanner,LocalPlanner,Status,Time(s),Distance(m),CPU(%),Memory(%),Memory(MiB),TotalRAM(GiB)\n")
                 
                 status_str = "SUCCESS" if success else "FAILURE"
                 
@@ -225,10 +232,13 @@ class BenchmarkManager:
                     scenario = parts[0]
                     local = parts[-1]
                     global_p = "_".join(parts[1:-1])
-                    f.write(f"{scenario},{global_p},{local},{status_str},{time_taken:.4f},{total_dist:.4f},{avg_cpu:.2f},{max_mem:.2f}\n")
+                    # Total RAM in GB
+                    total_ram_gb = psutil.virtual_memory().total / (1024**3)
+                    f.write(f"{scenario},{global_p},{local},{status_str},{time_taken:.4f},{total_dist:.4f},{avg_cpu:.2f},{max_mem:.2f},{max_mem_mb:.2f},{total_ram_gb:.2f}\n")
                 else:
-                    # Fallback for manual single runs or unexpected formats
-                    f.write(f"{self.planner_name},,{status_str},{time_taken:.4f},{total_dist:.4f},{avg_cpu:.2f},{max_mem:.2f}\n")
+                    # Fallback for manual single runs
+                    total_ram_gb = psutil.virtual_memory().total / (1024**3)
+                    f.write(f"{self.planner_name},,{status_str},{time_taken:.4f},{total_dist:.4f},{avg_cpu:.2f},{max_mem:.2f},{max_mem_mb:.2f},{total_ram_gb:.2f}\n")
                     
                 rospy.loginfo(f"Added to summary: {filepath}")
         except Exception as e:
