@@ -27,7 +27,7 @@ While `plannie` was originally designed for **UAVs (Unmanned Aerial Vehicles)** 
 *   **Metric Expansion**: Added support for **Megabytes (MB)** memory tracking (not just %) and Total System RAM context.
 *   **World & Robots**: Standardized on a Warehouse environment with dynamic pedestrians, replacing the original drone scenarios.
 
-## 📂 Project Structure
+## � Project Structure
 ```text
 .
 ├── scripts/
@@ -39,7 +39,7 @@ While `plannie` was originally designed for **UAVs (Unmanned Aerial Vehicles)** 
 └── requirements.txt       # Python dependencies
 ```
 
-## 📦 Installation
+## �📦 Installation
 
 **System Requirements**:
 *   Ubuntu 20.04 LTS
@@ -59,11 +59,18 @@ pip3 install -r requirements.txt
 Clone this repository into your catkin workspace `src` folder:
 ```bash
 cd ~/catkin_ws/src
-git clone <THIS_REPO_URL>
+git clone https://github.com/Felipe-Guerche/ros-path-planning-and-benchmark.git
 cd ~/catkin_ws
 catkin_make
 source devel/setup.bash
 ```
+
+## 🖥️ Testbed Hardware
+The benchmark results presented in this work were collected on a high-performance workstation to ensure consistent simulation physics.
+*   **CPU**: AMD Ryzen 7 5700X (8 Cores, 16 Threads) @ 3.4GHz
+*   **GPU**: AMD Radeon RX 6950 XT
+*   **RAM**: 32 GB DDR4
+*   **OS**: Ubuntu 20.04 LTS (Kernel 5.15)
 
 ## 🛠️ Usage
 
@@ -116,5 +123,5 @@ If you use this benchmark in your research, please cite the original authors who
 
 *The citation for this specific adaptation/paper will be added upon publication.*
 
-## 📞 Contact
+## �� Contact
 For questions regarding the adaptation for Ground Vehicles or the Metric extensions, please open an Issue in this repository.
