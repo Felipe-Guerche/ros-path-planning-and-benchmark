@@ -158,7 +158,7 @@ done
 # --- Step 4: Aggregate Results ---
 echo ""
 echo "[3/3] Aggregating results..."
-python scripts/analyze_results.py --results_dir "$RESULTS_DIR"
+python scripts/analyze_results.py --results_dir "$RESULTS_DIR" --plot --plot_dir "$RESULTS_DIR/figures"
 
 echo ""
 echo "============================================="

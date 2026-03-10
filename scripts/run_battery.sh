@@ -67,10 +67,8 @@ echo "Inflation Sweeps: ${INFLATION_SWEEPS[*]}"
 echo "Summary File: $SUMMARY_FILE"
 echo "=========================================="
 
-# Create summary header
-if [ ! -f "$SUMMARY_FILE" ]; then
-    echo "Scenario,GlobalPlanner,LocalPlanner,SweepParam,InflationFactor,PedCount,StartX,StartY,GoalX,GoalY,Seed,Status,Time(s),Distance(m),Smoothness(rad),CPU(%),Memory(%),Memory(MiB),TotalRAM(GiB)" > "$SUMMARY_FILE"
-fi
+# Note: CSV header is created by benchmark_manager.py on first write.
+# Do NOT create it here to avoid column mismatch.
 
 for scenario in "${SCENARIOS[@]}"; do
     # Determine pedestrian counts for this scenario
