@@ -12,6 +12,7 @@
 *  @license  GNU General Public License (GPL)                                            *
 ******************************************************************************************
 """
+import os
 import xml.etree.ElementTree as ET
 from plugins import ObstacleGenerator, PedGenerator, RobotGenerator, MapsGenerator, XMLGenerator
 
@@ -28,6 +29,9 @@ class MainGenerator(XMLGenerator):
         Args:
             path (str): the path of file(.launch.xml) to write.
         """
+        # Check headless mode from environment
+        is_headless = os.environ.get("BENCHMARK_HEADLESS", "0") == "1"
+
         # root
         launch = MainGenerator.createElement("launch")
 
@@ -38,12 +42,20 @@ class MainGenerator(XMLGenerator):
             for app_element in app_register:
                 launch.append(app_element)
 
+        # Determine rviz_file (disable in headless mode)
+        rviz_file = "" if is_headless else self.user_cfg["rviz_file"]
+
         # include
         include = MainGenerator.createElement("include", props={"file": "$(find sim_env)/launch/config.launch"})
         include.append(MainGenerator.createElement("arg", props={"name": "world", "value": "$(arg world_parameter)"}))
         include.append(MainGenerator.createElement("arg", props={"name": "map", "value": self.user_cfg["map"]}))
         include.append(MainGenerator.createElement("arg", props={"name": "robot_number", "value": str(len(self.user_cfg["robots_config"]))}))
-        include.append(MainGenerator.createElement("arg", props={"name": "rviz_file", "value": self.user_cfg["rviz_file"]}))
+        include.append(MainGenerator.createElement("arg", props={"name": "rviz_file", "value": rviz_file}))
+
+        # Headless overrides
+        if is_headless:
+            include.append(MainGenerator.createElement("arg", props={"name": "gui", "value": "false"}))
+            include.append(MainGenerator.createElement("arg", props={"name": "headless", "value": "true"}))
 
         launch.append(include)
         MainGenerator.indent(launch)
@@ -58,3 +70,4 @@ class MainGenerator(XMLGenerator):
 # dynamic generator
 main_gen = MainGenerator(PedGenerator(), RobotGenerator(), ObstacleGenerator(), MapsGenerator())
 main_gen.writeMainLaunch(main_gen.root_path + "sim_env/launch/main.launch")
+

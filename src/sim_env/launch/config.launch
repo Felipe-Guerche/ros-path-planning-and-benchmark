@@ -20,8 +20,8 @@
 
   <!-- some other parameters -->
   <arg name="debug" default="false" />
-  <arg name="gui" default="true" />
-  <arg name="headless" default="false" />
+  <arg name="gui" default="$(optenv BENCHMARK_GUI true)" />
+  <arg name="headless" default="$(optenv BENCHMARK_HEADLESS false)" />
   <arg name="rviz_file" default="" />
 
   <!-- start Gazebo with a specific world -->
