@@ -22,10 +22,15 @@ RUN apt-get update --fix-missing\
     ros-noetic-base-local-planner \
     ros-noetic-map-server \
     ros-noetic-move-base \
-    ros-noetic-navfn
+    ros-noetic-navfn \
+    xvfb \
+    && rm -rf /var/lib/apt/lists/*
 
-# python packages
-RUN pip3 install setuptools && pip3 install catkin-tools && pip3 install conan==1.59.0
+# python packages (benchmark dependencies)
+RUN pip3 install setuptools \
+    && pip3 install catkin-tools \
+    && pip3 install conan==1.59.0 \
+    && pip3 install numpy Pillow scipy pandas pyyaml
 
 # bash
 RUN echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
@@ -35,4 +40,8 @@ COPY . /project
 
 # catkin build
 RUN cd ./3rd && source ./conan_install.sh && cd ../ && source /opt/ros/noetic/setup.bash && catkin_make
-# RUN /bin/bash -c '. /opt/ros/noetic/setup.bash; catkin_make'
+
+# Make scripts executable
+RUN chmod +x /project/scripts/*.sh /project/docker/noetic/docker_entrypoint.sh
+
+ENTRYPOINT ["/project/docker/noetic/docker_entrypoint.sh"]

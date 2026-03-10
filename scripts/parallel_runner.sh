@@ -1,0 +1,167 @@
+#!/bin/bash
+
+# =============================================================================
+#  Parallel Benchmark Runner (Orchestrator)
+#  Builds the Docker image once and launches N containers in parallel,
+#  each running one planner combination with fixed CPU/RAM.
+#
+#  All values below are easily configurable.
+# =============================================================================
+
+set -e
+
+# ===================== MODULAR CONFIGURATION =====================
+
+# Docker image name
+DOCKER_IMAGE="ros-benchmark"
+DOCKERFILE_PATH="./docker/noetic"
+
+# --- Hardware Budget ---
+# Adjust these to your machine. The script will launch MAX_WORKERS
+# containers, each limited to CPUS_PER_WORKER cores and RAM_PER_WORKER memory.
+MAX_WORKERS=3              # Number of parallel containers
+CPUS_PER_WORKER="4.0"      # CPU threads per container (docker --cpus)
+RAM_PER_WORKER="8g"        # RAM per container (docker --memory)
+
+# --- Benchmark Matrix ---
+# Each combination of (SCENARIO, GLOBAL, LOCAL) becomes a "job".
+# Jobs are queued and dispatched to workers as they become available.
+SCENARIOS=("static" "dynamic")
+GLOBAL_PLANNERS=("astar" "hybrid_astar" "dijkstra" "lazy_theta_star" "dstar_lite" "rrt")
+LOCAL_PLANNERS=("dwa" "apf")
+NUM_RUNS=30                # Repetitions per job
+
+# --- Parameter Sweep ---
+# Define sweep values per global planner. Use "default" for no sweep.
+# Format: SWEEP_<PLANNER>="val1:val2:val3"
+SWEEP_rrt="10.0:20.0:30.0"
+# Add more as needed, e.g.:
+# SWEEP_astar="euclidean:manhattan:octile"
+
+# --- Port Allocation ---
+# Each worker gets a unique pair of ports to isolate ROS/Gazebo masters.
+BASE_ROS_PORT=11311
+BASE_GAZEBO_PORT=11345
+
+# --- Output ---
+RESULTS_DIR="$(pwd)/results"
+mkdir -p "$RESULTS_DIR"
+
+# =================================================================
+
+echo "============================================="
+echo "  Parallel Benchmark Orchestrator"
+echo "============================================="
+echo "  Workers      : $MAX_WORKERS"
+echo "  CPUs/Worker  : $CPUS_PER_WORKER"
+echo "  RAM/Worker   : $RAM_PER_WORKER"
+echo "  Runs/Job     : $NUM_RUNS"
+echo "  Results Dir  : $RESULTS_DIR"
+echo "============================================="
+
+# --- Step 1: Build Docker Image ---
+echo ""
+echo "[1/3] Building Docker image '$DOCKER_IMAGE'..."
+docker build -t "$DOCKER_IMAGE" -f "$DOCKERFILE_PATH/Dockerfile" .
+echo "      Build complete."
+
+# --- Step 2: Generate Job Queue ---
+# Each job is a string: "scenario|global|local|sweep_values"
+JOBS=()
+for scenario in "${SCENARIOS[@]}"; do
+    for global in "${GLOBAL_PLANNERS[@]}"; do
+        for local in "${LOCAL_PLANNERS[@]}"; do
+            # Check if there's a sweep for this global planner
+            sweep_var="SWEEP_${global}"
+            sweep_vals="${!sweep_var:-default}"
+            JOBS+=("${scenario}|${global}|${local}|${sweep_vals}")
+        done
+    done
+done
+
+TOTAL_JOBS=${#JOBS[@]}
+echo ""
+echo "[2/3] Generated $TOTAL_JOBS jobs. Dispatching to $MAX_WORKERS workers..."
+echo ""
+
+# --- Step 3: Dispatch Jobs ---
+# Simple round-robin dispatcher with GNU parallel-style wait.
+RUNNING_PIDS=()
+WORKER_ID=0
+JOB_INDEX=0
+
+dispatch_job() {
+    local job="$1"
+    local wid="$2"
+
+    IFS='|' read -r scenario global local sweep_vals <<< "$job"
+
+    local ros_port=$((BASE_ROS_PORT + wid))
+    local gazebo_port=$((BASE_GAZEBO_PORT + wid))
+    local container_name="benchmark_w${wid}_${scenario}_${global}_${local}"
+
+    echo "  [Worker $wid] Starting: $scenario | $global + $local | sweep=$sweep_vals"
+
+    docker run --rm \
+        --name "$container_name" \
+        --cpus="$CPUS_PER_WORKER" \
+        --memory="$RAM_PER_WORKER" \
+        -e WORKER_ID="$wid" \
+        -e GLOBAL_PLANNER="$global" \
+        -e LOCAL_PLANNER="$local" \
+        -e SCENARIO="$scenario" \
+        -e NUM_RUNS="$NUM_RUNS" \
+        -e SWEEP_VALUES="$sweep_vals" \
+        -e ROS_MASTER_PORT="$ros_port" \
+        -e GAZEBO_MASTER_PORT="$gazebo_port" \
+        -v "$RESULTS_DIR:/project/src/plannie-main/results" \
+        "$DOCKER_IMAGE" \
+        > "$RESULTS_DIR/log_${container_name}.txt" 2>&1 &
+
+    RUNNING_PIDS+=($!)
+}
+
+# Wait for a slot to open up
+wait_for_slot() {
+    while [ ${#RUNNING_PIDS[@]} -ge $MAX_WORKERS ]; do
+        local new_pids=()
+        for pid in "${RUNNING_PIDS[@]}"; do
+            if kill -0 "$pid" 2>/dev/null; then
+                new_pids+=("$pid")
+            else
+                wait "$pid" 2>/dev/null || true
+            fi
+        done
+        RUNNING_PIDS=("${new_pids[@]}")
+        if [ ${#RUNNING_PIDS[@]} -ge $MAX_WORKERS ]; then
+            sleep 5
+        fi
+    done
+}
+
+# Dispatch all jobs
+for job in "${JOBS[@]}"; do
+    wait_for_slot
+    dispatch_job "$job" "$WORKER_ID"
+    WORKER_ID=$(( (WORKER_ID + 1) % MAX_WORKERS ))
+    JOB_INDEX=$((JOB_INDEX + 1))
+    echo "      ($JOB_INDEX / $TOTAL_JOBS jobs dispatched)"
+done
+
+# Wait for all remaining workers
+echo ""
+echo "All jobs dispatched. Waiting for remaining workers to finish..."
+for pid in "${RUNNING_PIDS[@]}"; do
+    wait "$pid" 2>/dev/null || true
+done
+
+# --- Step 4: Aggregate Results ---
+echo ""
+echo "[3/3] Aggregating results..."
+python scripts/analyze_results.py --results_dir "$RESULTS_DIR"
+
+echo ""
+echo "============================================="
+echo "  All benchmarks complete!"
+echo "  Results: $RESULTS_DIR"
+echo "============================================="
