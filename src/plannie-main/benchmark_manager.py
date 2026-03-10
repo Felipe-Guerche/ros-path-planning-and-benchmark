@@ -152,11 +152,7 @@ class BenchmarkManager:
             self.mem_usages_mb.append(psutil.virtual_memory().used / (1024 * 1024))
 
         # Force Success Check (Fallback for picky move_base)
-        # Calculate distance to GOAL (final target), not just path integration
-        dist_to_goal = math.sqrt((x - self.goal_x)**2 + (y - self.goal_y)**2)
-        
-        # Force Success Check (Fallback for picky move_base)
-        # Calculate distance to GOAL (final target), not just path integration
+        # Calculate distance to GOAL (final target)
         dist_to_goal = math.sqrt((x - self.goal_x)**2 + (y - self.goal_y)**2)
         
         # Tolerance: 0.1m (10cm radius) - Stricter as requested
@@ -195,7 +191,10 @@ class BenchmarkManager:
         return total_angle_change
 
     def finish_benchmark(self, success):
+        if self.finished:
+            return  # Guard against double-finish (race between done_callback and timeout)
         self.finished = True
+        self.is_running = False
         end_time = time.time()
         duration = end_time - self.start_time
         self.smoothness = self.compute_smoothness()

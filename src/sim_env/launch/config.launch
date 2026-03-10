@@ -43,7 +43,7 @@
 
   <!-- open rviz for visualization (disabled in headless mode) -->
   <node pkg="dynamic_rviz_config" type="rviz_generate.py" name="rosapp_rviz" args="$(arg robot_number)" output="screen"
-    if="$(eval arg('rviz_file') == '' and not optenv('BENCHMARK_HEADLESS', '0') == '1')" />
+    if="$(eval arg('rviz_file') == '' and arg('headless') == 'false')" />
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find sim_env)/rviz/$(arg rviz_file)"
-    if="$(eval arg('rviz_file') != '' and not optenv('BENCHMARK_HEADLESS', '0') == '1')" />
+    if="$(eval arg('rviz_file') != '' and arg('headless') == 'false')" />
 </launch>

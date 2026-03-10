@@ -57,7 +57,7 @@ def compute_success_rates(df, group_col="GlobalPlanner"):
     results = []
     for name, group in df.groupby(group_col):
         n_total = len(group)
-        n_success = len(group[group['Status'] == 'Success']) if 'Status' in group.columns else 0
+        n_success = len(group[group['Status'].str.upper() == 'SUCCESS']) if 'Status' in group.columns else 0
         rate, ci_low, ci_high = wilson_ci(n_success, n_total)
         results.append({
             group_col: name,
@@ -131,7 +131,7 @@ def analyze(df, group_col="GlobalPlanner", metrics=None):
 
     # Filter successful runs for metric analysis
     if "Status" in df.columns:
-        successful = df[df["Status"] == "Success"]
+        successful = df[df["Status"].str.upper() == "SUCCESS"]
         print(f"\nSuccessful runs: {len(successful)} / {len(df)}")
     else:
         successful = df
@@ -190,7 +190,7 @@ def generate_plots(df, group_col="GlobalPlanner", output_dir="results/figures"):
     os.makedirs(output_dir, exist_ok=True)
 
     if "Status" in df.columns:
-        successful = df[df["Status"] == "Success"]
+        successful = df[df["Status"].str.upper() == "SUCCESS"]
     else:
         successful = df
 
@@ -248,7 +248,7 @@ def generate_plots(df, group_col="GlobalPlanner", output_dir="results/figures"):
         labels = []
         for name, group in df.groupby(group_col):
             n_total = len(group)
-            n_success = len(group[group['Status'] == 'Success'])
+            n_success = len(group[group['Status'].str.upper() == 'SUCCESS'])
             rate, ci_low, ci_high = wilson_ci(n_success, n_total)
             rates.append(rate * 100)
             ci_lows.append((rate - ci_low) * 100)
