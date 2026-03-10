@@ -10,13 +10,27 @@ parallel_runner.sh          ← Run this from project root (Ubuntu)
 ├── docker run [Worker 0]    ── docker_entrypoint.sh → run_battery.sh
 ├── docker run [Worker 1]    ── docker_entrypoint.sh → run_battery.sh
 ├── docker run [Worker 2]    ── docker_entrypoint.sh → run_battery.sh
-│                                ├── generate_random_poses.py    (safe start/goal)
-│                                ├── generate_pedestrian_config.py (N peds)
-│                                └── benchmark_manager.py         (collect metrics)
+│                                ├── generate_pedestrian_config.py (N peds, FIRST)
+│                                ├── generate_random_poses.py      (safe start/goal, excludes peds)
+│                                └── benchmark_manager.py           (collect metrics)
 └── analyze_results.py       (merge + stats + plots)
 ```
 
 Each Docker container runs **one planner combination** in isolation with fixed CPU/RAM.
+
+---
+
+## Safety & Robustness
+
+The benchmark includes multiple layers of protection against invalid runs:
+
+- **Crash guard**: if `generate_random_poses.py` fails, the run is skipped (not executed with empty coords)
+- **Execution order**: pedestrian config is generated BEFORE pose sampling, so exclusion zones are always current
+- **Spawn safety**: 3-layer wall check (threshold → erosion 0.5m → connected component) + pedestrian exclusion (1.5m radius)
+- **Race condition guard**: `finish_benchmark()` can only fire once, even if `done_callback` and timeout trigger simultaneously
+- **Process cleanup**: `killpro.sh` kills all ROS/Gazebo processes (roscore, move_base, gzserver, amcl, etc.) between runs
+- **Headless mode**: RViz and Gazebo GUI fully disabled in Docker via `BENCHMARK_HEADLESS` env var
+- **Resource caching**: `max_timeout` cached at init instead of querying ROS param server on every odom callback
 
 ---
 
