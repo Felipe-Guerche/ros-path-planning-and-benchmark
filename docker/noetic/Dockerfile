@@ -30,7 +30,7 @@ RUN apt-get update --fix-missing\
 RUN pip3 install setuptools \
     && pip3 install catkin-tools \
     && pip3 install conan==1.59.0 \
-    && pip3 install numpy Pillow scipy pandas pyyaml
+    && pip3 install numpy Pillow scipy pandas pyyaml matplotlib
 
 # bash
 RUN echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc

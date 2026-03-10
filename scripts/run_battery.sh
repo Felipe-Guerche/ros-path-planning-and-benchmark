@@ -122,30 +122,37 @@ for scenario in "${SCENARIOS[@]}"; do
                             
                             # Generate Random Start and Goal (with seed logging)
                             SEED=$RANDOM$RANDOM
+
+                            # Generate pedestrian config FIRST (so pose gen can exclude ped zones)
+                            if [ "$scenario" == "dynamic" ] && [ "$ped_count" != "0" ]; then
+                                python generate_pedestrian_config.py "$MAP_FILE" \
+                                    --num_peds "$ped_count" \
+                                    --seed $SEED \
+                                    --output "$PED_CONFIG_FILE" 2>/dev/null
+                            fi
+
                             if [ "$scenario" == "dynamic" ]; then
                                 POSES=$(python generate_random_poses.py "$MAP_FILE" --seed $SEED --ped_config "$PED_CONFIG_FILE" 2>/dev/null)
                             else
                                 POSES=$(python generate_random_poses.py "$MAP_FILE" --seed $SEED 2>/dev/null)
                             fi
+
+                            # Validate POSES output (crash guard)
                             START_X=$(echo $POSES | awk '{print $1}')
                             START_Y=$(echo $POSES | awk '{print $2}')
                             GOAL_X=$(echo $POSES | awk '{print $3}')
                             GOAL_Y=$(echo $POSES | awk '{print $4}')
-                            
+
+                            if [ -z "$START_X" ] || [ -z "$GOAL_X" ]; then
+                                echo "ERROR: generate_random_poses.py failed (empty output). Skipping run $i."
+                                continue
+                            fi
+
                             echo ">>> Seed=$SEED | Start($START_X, $START_Y) -> Goal($GOAL_X, $GOAL_Y)"
 
                             # Update robot spawn position
                             sed -i "s/robot1_x_pos: \".*\"/robot1_x_pos: \"$START_X\"/" "$CONFIG_FILE"
                             sed -i "s/robot1_y_pos: \".*\"/robot1_y_pos: \"$START_Y\"/" "$CONFIG_FILE"
-
-                            # Generate pedestrian config for dynamic scenario
-                            if [ "$scenario" == "dynamic" ] && [ "$ped_count" != "0" ]; then
-                                python generate_pedestrian_config.py "$MAP_FILE" \
-                                    --num_peds "$ped_count" \
-                                    --seed $SEED \
-                                    --robot_x "$START_X" --robot_y "$START_Y" \
-                                    --output "$PED_CONFIG_FILE" 2>/dev/null
-                            fi
                         
                             # Cleanup
                             echo "[1/4] Cleaning process..."

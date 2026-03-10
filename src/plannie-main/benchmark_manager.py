@@ -19,6 +19,7 @@ class BenchmarkManager:
         self.planner_name = rospy.get_param('~planner_name', 'unknown')
         self.goal_x = rospy.get_param('~goal_x', 2.0)
         self.goal_y = rospy.get_param('~goal_y', 2.0)
+        self.max_timeout = rospy.get_param('~max_timeout', 180.0)
         
         # State
         self.start_time = None
@@ -164,10 +165,8 @@ class BenchmarkManager:
             return
 
         # Timeout Check
-        # Check against a max_timeout param (default 180s = 3 mins)
-        max_timeout = rospy.get_param('~max_timeout', 180.0)
-        if (time.time() - self.start_time) > max_timeout:
-            rospy.logwarn(f"Benchmark timed out after {max_timeout}s!")
+        if (time.time() - self.start_time) > self.max_timeout:
+            rospy.logwarn(f"Benchmark timed out after {self.max_timeout}s!")
             self.client.cancel_all_goals()
             self.finish_benchmark(False)
 
