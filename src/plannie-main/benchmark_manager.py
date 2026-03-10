@@ -175,12 +175,32 @@ class BenchmarkManager:
             self.client.cancel_all_goals()
             self.finish_benchmark(False)
 
+    def compute_smoothness(self):
+        """Compute path smoothness as sum of absolute angular changes (radians)."""
+        if len(self.trajectory) < 3:
+            return 0.0
+        total_angle_change = 0.0
+        for i in range(1, len(self.trajectory) - 1):
+            x0, y0 = self.trajectory[i-1]
+            x1, y1 = self.trajectory[i]
+            x2, y2 = self.trajectory[i+1]
+            dx1, dy1 = x1 - x0, y1 - y0
+            dx2, dy2 = x2 - x1, y2 - y1
+            angle1 = math.atan2(dy1, dx1)
+            angle2 = math.atan2(dy2, dx2)
+            diff = abs(angle2 - angle1)
+            if diff > math.pi:
+                diff = 2 * math.pi - diff
+            total_angle_change += diff
+        return total_angle_change
+
     def finish_benchmark(self, success):
         self.finished = True
         end_time = time.time()
         duration = end_time - self.start_time
+        self.smoothness = self.compute_smoothness()
         
-        rospy.loginfo(f"Benchmark finished! Success: {success}")
+        rospy.loginfo(f"Benchmark finished! Success: {success} | Smoothness: {self.smoothness:.4f} rad")
         self.save_results(success, duration)
         rospy.signal_shutdown("Benchmark Complete")
 
@@ -195,12 +215,14 @@ class BenchmarkManager:
         avg_cpu = sum(self.cpu_usages) / len(self.cpu_usages) if self.cpu_usages else 0
         max_mem = max(self.mem_usages) if self.mem_usages else 0
         max_mem_mb = max(self.mem_usages_mb) if self.mem_usages_mb else 0
+        smoothness = getattr(self, 'smoothness', 0.0)
         
         with open(filepath, 'w') as f:
             f.write(f"Planner: {self.planner_name}\n")
             f.write(f"Status: {'SUCCESS' if success else 'FAILURE'}\n")
             f.write(f"Time: {duration:.4f} s\n")
             f.write(f"Distance: {self.total_distance:.4f} m\n")
+            f.write(f"Smoothness: {smoothness:.4f} rad\n")
             f.write(f"Avg CPU: {avg_cpu:.2f} %\n")
             f.write(f"Max Mem: {max_mem:.2f} %\n")
             f.write(f"Max Mem: {max_mem_mb:.2f} MiB\n")
@@ -213,32 +235,45 @@ class BenchmarkManager:
         # Save to unified summary if configured
         summary_file = rospy.get_param('~summary_file', '')
         if summary_file:
-            self.save_to_summary(summary_file, success, duration, self.total_distance, avg_cpu, max_mem, max_mem_mb)
+            self.save_to_summary(summary_file, success, duration, self.total_distance, avg_cpu, max_mem, max_mem_mb, smoothness)
 
-    def save_to_summary(self, filepath, success, time_taken, total_dist, avg_cpu, max_mem, max_mem_mb):
+    def save_to_summary(self, filepath, success, time_taken, total_dist, avg_cpu, max_mem, max_mem_mb, smoothness=0.0):
         file_exists = os.path.isfile(filepath)
         try:
             with open(filepath, 'a') as f:
                 if not file_exists:
-                    # Header matches run_battery.sh: Scenario,GlobalPlanner,LocalPlanner,Status,Time(s),Distance(m),CPU(%),Memory(%),Memory(MiB),TotalRAM(GiB)
-                    f.write("Scenario,GlobalPlanner,LocalPlanner,Status,Time(s),Distance(m),CPU(%),Memory(%),Memory(MiB),TotalRAM(GiB)\n")
+                    f.write("Scenario,GlobalPlanner,LocalPlanner,SweepParam,InflationFactor,PedCount,Status,Time(s),Distance(m),Smoothness(rad),CPU(%),Memory(%),Memory(MiB),TotalRAM(GiB)\n")
                 
                 status_str = "SUCCESS" if success else "FAILURE"
+                total_ram_gb = psutil.virtual_memory().total / (1024**3)
                 
-                # Split planner_name (e.g., "static_hybrid_astar_dwa") into components
-                # Assumption: scenario is first, local is last. Middle is global (can have underscores).
-                parts = self.planner_name.split('_')
-                if len(parts) >= 3:
-                    scenario = parts[0]
-                    local = parts[-1]
-                    global_p = "_".join(parts[1:-1])
-                    # Total RAM in GB
-                    total_ram_gb = psutil.virtual_memory().total / (1024**3)
-                    f.write(f"{scenario},{global_p},{local},{status_str},{time_taken:.4f},{total_dist:.4f},{avg_cpu:.2f},{max_mem:.2f},{max_mem_mb:.2f},{total_ram_gb:.2f}\n")
-                else:
-                    # Fallback for manual single runs
-                    total_ram_gb = psutil.virtual_memory().total / (1024**3)
-                    f.write(f"{self.planner_name},,{status_str},{time_taken:.4f},{total_dist:.4f},{avg_cpu:.2f},{max_mem:.2f},{max_mem_mb:.2f},{total_ram_gb:.2f}\n")
+                # Parse planner tag: scenario_global_local_swX_infY_pedZ_runN
+                tag = self.planner_name
+                parts = tag.split('_')
+                scenario = parts[0] if len(parts) >= 1 else "unknown"
+                
+                # Extract sweep/inflation/ped from tag
+                sweep_val = "default"
+                inflation = "0.5"
+                ped_count = "0"
+                remaining = []
+                for p in parts[1:]:
+                    if p.startswith('sw'):
+                        sweep_val = p[2:]
+                    elif p.startswith('inf'):
+                        inflation = p[3:]
+                    elif p.startswith('ped'):
+                        ped_count = p[3:]
+                    elif p.startswith('run'):
+                        pass  # skip run number
+                    else:
+                        remaining.append(p)
+                
+                # Last remaining = local planner, rest = global planner
+                local_p = remaining[-1] if remaining else "unknown"
+                global_p = "_".join(remaining[:-1]) if len(remaining) > 1 else (remaining[0] if remaining else "unknown")
+                
+                f.write(f"{scenario},{global_p},{local_p},{sweep_val},{inflation},{ped_count},{status_str},{time_taken:.4f},{total_dist:.4f},{smoothness:.4f},{avg_cpu:.2f},{max_mem:.2f},{max_mem_mb:.2f},{total_ram_gb:.2f}\n")
                     
                 rospy.loginfo(f"Added to summary: {filepath}")
         except Exception as e:
