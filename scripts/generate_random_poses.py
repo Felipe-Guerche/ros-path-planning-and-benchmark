@@ -191,12 +191,24 @@ def main():
             print(f"{x1:.3f} {y1:.3f} {x2:.3f} {y2:.3f}")
             return
 
-    # Fallback: return most distant points in the region
-    print("Warning: Could not find points satisfying min_dist", file=sys.stderr)
-    r1, c1 = free_y[0], free_x[0]
-    r2, c2 = free_y[-1], free_x[-1]
-    x1, y1 = px_to_real(r1, c1, H, resolution, ox, oy)
-    x2, y2 = px_to_real(r2, c2, H, resolution, ox, oy)
+    # Fallback: find the most distant pair from a sample of candidates
+    print("Warning: Could not find points satisfying min_dist, using most distant pair", file=sys.stderr)
+    n_candidates = min(50, len(free_y))
+    candidate_indices = random.sample(range(len(free_y)), n_candidates)
+    best_dist = 0
+    best_i, best_j = candidate_indices[0], candidate_indices[-1]
+    for ci in candidate_indices:
+        for cj in candidate_indices:
+            if ci == cj:
+                continue
+            xci, yci = px_to_real(free_y[ci], free_x[ci], H, resolution, ox, oy)
+            xcj, ycj = px_to_real(free_y[cj], free_x[cj], H, resolution, ox, oy)
+            d = math.hypot(xcj - xci, ycj - yci)
+            if d > best_dist:
+                best_dist = d
+                best_i, best_j = ci, cj
+    x1, y1 = px_to_real(free_y[best_i], free_x[best_i], H, resolution, ox, oy)
+    x2, y2 = px_to_real(free_y[best_j], free_x[best_j], H, resolution, ox, oy)
     print(f"{x1:.3f} {y1:.3f} {x2:.3f} {y2:.3f}")
 
 
