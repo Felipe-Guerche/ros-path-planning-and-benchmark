@@ -45,24 +45,13 @@ While `plannie` was originally designed for **UAVs (Unmanned Aerial Vehicles)** 
 *   Ubuntu 20.04 LTS
 *   ROS Noetic
 
-### 1. Install Dependencies
-```bash
-# Install core ROS Navigation stack
-sudo apt install ros-noetic-desktop-full
-sudo apt install ros-noetic-navigation ros-noetic-teb-local-planner
+### 1. Automated Installation
+Clone this repository and run the automated setup script. It will install all required `apt` and `pip` dependencies, set executable permissions, and build the Catkin workspace automatically.
 
-# Install analysis dependencies
-pip3 install -r requirements.txt
-```
-
-### 2. Build the Workspace
-Clone this repository into your catkin workspace `src` folder:
 ```bash
-cd ~/catkin_ws/src
 git clone https://github.com/Felipe-Guerche/ros-path-planning-and-benchmark.git
-cd ~/catkin_ws
-catkin_make
-source devel/setup.bash
+cd ros-path-planning-and-benchmark
+./setup.sh
 ```
 
 ## 🖥️ Testbed Hardware
@@ -78,7 +67,7 @@ The benchmark results presented in this work were collected on a high-performanc
 To run a full scientific evaluation (cycling through planners and scenarios):
 
 1.  **Configure the Test**:
-    Edit `scripts/benchmark_worker.sh` to select your desired planners:
+    Edit `scripts/run_benchmark.sh` to select your desired planners:
     ```bash
     GLOBAL_PLANNERS=("astar" "rrt" "hybrid_astar")
     LOCAL_PLANNERS=("dwa" "apf")
@@ -89,11 +78,10 @@ To run a full scientific evaluation (cycling through planners and scenarios):
 2.  **Execute**:
     ```bash
     cd scripts
-    chmod +x benchmark_worker.sh cleanup_processes.sh
-    ./benchmark_worker.sh
+    ./run_benchmark.sh
     ```
 
-    > **Note**: This will automatically launch Gazebo, run the navigation task, kill the processes, and repeat.
+    > **Note**: This will automatically spin up Docker containers, launch Gazebo headless, run the navigation task, kill the processes, and aggregate the results.
 
 3.  **View Results**:
     Results are saved in `src/plannie-main/results/`.

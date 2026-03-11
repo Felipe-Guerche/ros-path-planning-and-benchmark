@@ -43,12 +43,16 @@ The benchmark includes multiple layers of protection against invalid runs:
 - Ubuntu 20.04+ with Docker installed
 - Ryzen 7 5700 (16 threads) / 32GB RAM (or adjust config)
 
+Run the automated setup to install dependencies and build the workspace:
+```bash
+./setup.sh
+```
+
 ### 2. Run Full Benchmark (Parallel)
 
 ```bash
-cd ros-path-planning-and-benchmark
-chmod +x scripts/run_benchmark.sh
-./scripts/run_benchmark.sh
+cd scripts
+./run_benchmark.sh
 ```
 
 This will:
