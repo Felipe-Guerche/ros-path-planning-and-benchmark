@@ -5,7 +5,7 @@ End-to-end automated benchmark for path planning algorithms with Docker isolatio
 ## Architecture
 
 ```
-benchmark_orchestrator.sh   ← Run this from project root (Ubuntu)
+run_benchmark.sh   ← Run this from project root (Ubuntu)
 ├── docker build             (one-time)
 ├── docker run [Worker 0]    ── docker_entrypoint.sh → benchmark_worker.sh
 ├── docker run [Worker 1]    ── docker_entrypoint.sh → benchmark_worker.sh
@@ -47,8 +47,8 @@ The benchmark includes multiple layers of protection against invalid runs:
 
 ```bash
 cd ros-path-planning-and-benchmark
-chmod +x scripts/benchmark_orchestrator.sh
-./scripts/benchmark_orchestrator.sh
+chmod +x scripts/run_benchmark.sh
+./scripts/run_benchmark.sh
 ```
 
 This will:
@@ -61,7 +61,7 @@ This will:
 
 To change the number of workers, RAM/CPU allocation, or the default `NUM_RUNS`:
 
-Edit `scripts/benchmark_orchestrator.sh`:
+Edit `scripts/run_benchmark.sh`:
 ```bash
 MAX_WORKERS=1
 NUM_RUNS=2
@@ -98,7 +98,7 @@ python scripts/analyze_results.py --summary_file ./results/battery_summary_20260
 
 ## Configuration Reference
 
-### `scripts/benchmark_orchestrator.sh` — Orchestrator
+### `scripts/run_benchmark.sh` — Orchestrator
 
 | Variable | Default | Description |
 |---|---|---|
@@ -247,7 +247,7 @@ Each container gets:
 
 | Script | Purpose |
 |---|---|
-| `benchmark_orchestrator.sh` | **Main entry point**: Docker orchestrator |
+| `run_benchmark.sh` | **Main entry point**: Docker orchestrator |
 | `benchmark_worker.sh` | Test battery (Docker single-planner or legacy full matrix) |
 | `generate_random_poses.py` | Generate safe `(x, y)` pairs for Start and Goal |
 | `generate_pedestrian_config.py` | Generate starting locations for wandering pedestrians |
