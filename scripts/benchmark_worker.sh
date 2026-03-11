@@ -161,12 +161,12 @@ for scenario in "${SCENARIOS[@]}"; do
                         
                             # Cleanup
                             echo "[1/4] Cleaning process..."
-                            ./killpro.sh > /dev/null 2>&1
+                            ./cleanup_processes.sh > /dev/null 2>&1
                             sleep 5
                             
                             # Start Simulation
                             echo "[2/4] Starting Simulation..."
-                            ./main.sh > /dev/null 2>&1 &
+                            ./launch_simulator.sh > /dev/null 2>&1 &
                             SIM_PID=$!
                             
                             # Wait for Readiness
@@ -189,7 +189,7 @@ for scenario in "${SCENARIOS[@]}"; do
                                 
                                 if [ $ELAPSED -gt $TIMEOUT ]; then
                                     echo "Timeout waiting for simulation!"
-                                    ./killpro.sh
+                                    ./cleanup_processes.sh
                                     exit 1
                                 fi
                                 sleep 2
@@ -212,7 +212,7 @@ for scenario in "${SCENARIOS[@]}"; do
                             echo ">>> Finished: $PLANNER_TAG"
                             
                             # Cleanup
-                            ./killpro.sh > /dev/null 2>&1
+                            ./cleanup_processes.sh > /dev/null 2>&1
                             sleep 2
                         done
                     done

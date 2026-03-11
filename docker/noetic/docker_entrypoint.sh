@@ -48,7 +48,7 @@ echo "  ROS Master     : ${ROS_MASTER_URI}"
 echo "  Gazebo Master  : ${GAZEBO_MASTER_URI}"
 echo "============================================="
 
-# Export single-planner mode env vars for run_battery.sh
+# Export single-planner mode env vars for benchmark_worker.sh
 export SINGLE_GLOBAL_PLANNER="${GLOBAL_PLANNER}"
 export SINGLE_LOCAL_PLANNER="${LOCAL_PLANNER}"
 export SINGLE_SCENARIO="${SCENARIO}"
@@ -62,4 +62,4 @@ sleep 1
 
 # Run the battery
 cd /project/scripts
-exec ./run_battery.sh
+exec ./benchmark_worker.sh

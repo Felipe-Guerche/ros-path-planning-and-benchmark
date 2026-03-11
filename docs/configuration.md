@@ -9,7 +9,7 @@
 
 ## <span id="0">0. Introduction
 
-In this reposity, you can simply change configs through modifing the `src/user_config/user_config.yaml`. When you run `main.sh`, our python script will re-generated `*.launch`, `*.world` and so on, according to your configs in `user_config.yaml`.
+In this reposity, you can simply change configs through modifing the `src/user_config/user_config.yaml`. When you run `launch_simulator.sh`, our python script will re-generated `*.launch`, `*.world` and so on, according to your configs in `user_config.yaml`.
 
 Below is an example of `user_config.yaml`
 

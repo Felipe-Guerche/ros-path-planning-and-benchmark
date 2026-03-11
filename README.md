@@ -7,7 +7,7 @@ It bridges the gap between algorithmic implementation and performance verificati
 ## 🚀 Key Features
 
 *   **Diverse Algorithm Suite**: access to various Global Planners (A*, Hybrid A*, RRT, Lazy Theta*, etc.) and Local Planners (DWA, APF, MPC, etc.).
-*   **Automated Benchmarking**: A system to run batch simulations (`scripts/run_battery.sh`), cycling through planner configurations and dynamic scenarios.
+*   **Automated Benchmarking**: A system to run batch simulations (`scripts/benchmark_worker.sh`), cycling through planner configurations and dynamic scenarios.
 *   **Performance Metrics**: Automatically captures execution time, path length, CPU usage, and Memory consumption (MB & %) for every run.
 *   **Dynamic Environments**: Support for warehouse environments with pedestrian simulation.
 
@@ -22,7 +22,7 @@ This project serves as an integration layer between two excellent open-source pr
 While `plannie` was originally designed for **UAVs (Unmanned Aerial Vehicles)** and real-world flight missions, we have adapted its benchmarking logic for **UGVs (Unmanned Ground Vehicles)** / wheeled robots.
 
 **Key Changes from Original Repositories**:
-*   **Orchestration**: Created `scripts/run_battery.sh` to automate hundreds of sequential runs without human intervention.
+*   **Orchestration**: Created `scripts/benchmark_worker.sh` to automate hundreds of sequential runs without human intervention.
 *   **Process Monitoring**: Updated `benchmark_manager.py` to specifically track `move_base` process resources instead of system-wide averages, providing more granular CPU/Memory data.
 *   **Metric Expansion**: Added support for **Megabytes (MB)** memory tracking (not just %) and Total System RAM context.
 *   **World & Robots**: Standardized on a Warehouse environment with dynamic pedestrians, replacing the original drone scenarios.
@@ -31,7 +31,7 @@ While `plannie` was originally designed for **UAVs (Unmanned Aerial Vehicles)** 
 ```text
 .
 ├── scripts/
-│   ├── run_battery.sh     # Main benchmark automation script
+│   ├── benchmark_worker.sh     # Main benchmark automation script
 │   └── ...
 ├── src/
 │   ├── plannie-main/      # Plannie Core Modules (Metric Collection)
@@ -78,7 +78,7 @@ The benchmark results presented in this work were collected on a high-performanc
 To run a full scientific evaluation (cycling through planners and scenarios):
 
 1.  **Configure the Test**:
-    Edit `scripts/run_battery.sh` to select your desired planners:
+    Edit `scripts/benchmark_worker.sh` to select your desired planners:
     ```bash
     GLOBAL_PLANNERS=("astar" "rrt" "hybrid_astar")
     LOCAL_PLANNERS=("dwa" "apf")
@@ -89,8 +89,8 @@ To run a full scientific evaluation (cycling through planners and scenarios):
 2.  **Execute**:
     ```bash
     cd scripts
-    chmod +x run_battery.sh killpro.sh
-    ./run_battery.sh
+    chmod +x benchmark_worker.sh cleanup_processes.sh
+    ./benchmark_worker.sh
     ```
 
     > **Note**: This will automatically launch Gazebo, run the navigation task, kill the processes, and repeat.
@@ -105,7 +105,7 @@ If you just want to test one configuration manually:
 
 ```bash
 cd scripts
-./main.sh
+./launch_simulator.sh
 ```
 *   Use **RViz** (2D Nav Goal) to send a goal manully.
 *   *Note: Manual runs may not log metrics unless the benchmark node is explicitly launched.*
@@ -113,7 +113,7 @@ cd scripts
 ## ⚙️ Configuration
 
 *   **Robot & World**: Modify `src/user_config/user_config.yaml` to change the robot model (e.g., `turtlebot3_waffle`) or the map (e.g., `warehouse`).
-*   **Pedestrians**: To enable/disable dynamic obstacles, toggle the `pedestrians` plugin line in `user_config.yaml` (handled automatically by `run_battery.sh`).
+*   **Pedestrians**: To enable/disable dynamic obstacles, toggle the `pedestrians` plugin line in `user_config.yaml` (handled automatically by `benchmark_worker.sh`).
 
 ## 📝 Citation
 If you use this benchmark in your research, please cite the original authors who provided the foundation for this work:

@@ -5,11 +5,12 @@ End-to-end automated benchmark for path planning algorithms with Docker isolatio
 ## Architecture
 
 ```
-parallel_runner.sh          ← Run this from project root (Ubuntu)
+benchmark_orchestrator.sh   ← Run this from project root (Ubuntu)
 ├── docker build             (one-time)
-├── docker run [Worker 0]    ── docker_entrypoint.sh → run_battery.sh
-├── docker run [Worker 1]    ── docker_entrypoint.sh → run_battery.sh
-├── docker run [Worker 2]    ── docker_entrypoint.sh → run_battery.sh
+├── docker run [Worker 0]    ── docker_entrypoint.sh → benchmark_worker.sh
+├── docker run [Worker 1]    ── docker_entrypoint.sh → benchmark_worker.sh
+├── docker run [Worker 2]    ── docker_entrypoint.sh → benchmark_worker.sh
+├── docker run [Worker 3]    ── docker_entrypoint.sh → benchmark_worker.sh
 │                                ├── generate_pedestrian_config.py (N peds, FIRST)
 │                                ├── generate_random_poses.py      (safe start/goal, excludes peds)
 │                                └── benchmark_manager.py           (collect metrics)
@@ -28,7 +29,8 @@ The benchmark includes multiple layers of protection against invalid runs:
 - **Execution order**: pedestrian config is generated BEFORE pose sampling, so exclusion zones are always current
 - **Spawn safety**: 3-layer wall check (threshold → erosion 0.5m → connected component) + pedestrian exclusion (1.5m radius)
 - **Race condition guard**: `finish_benchmark()` can only fire once, even if `done_callback` and timeout trigger simultaneously
-- **Process cleanup**: `killpro.sh` kills all ROS/Gazebo processes (roscore, move_base, gzserver, amcl, etc.) between runs
+- **Port isolation**: Each worker is assigned a unique `ROS_MASTER_URI` and `GAZEBO_MASTER_URI` pair
+- **Process cleanup**: `cleanup_processes.sh` kills all ROS/Gazebo processes (roscore, move_base, gzserver, amcl, etc.) between runs
 - **Headless mode**: RViz and Gazebo GUI fully disabled in Docker via `BENCHMARK_HEADLESS` env var
 - **Resource caching**: `max_timeout` cached at init instead of querying ROS param server on every odom callback
 
@@ -45,8 +47,8 @@ The benchmark includes multiple layers of protection against invalid runs:
 
 ```bash
 cd ros-path-planning-and-benchmark
-chmod +x scripts/parallel_runner.sh
-./scripts/parallel_runner.sh
+chmod +x scripts/benchmark_orchestrator.sh
+./scripts/benchmark_orchestrator.sh
 ```
 
 This will:
@@ -57,7 +59,9 @@ This will:
 
 ### 3. Smoke Test (Quick Validation)
 
-Edit `scripts/parallel_runner.sh`:
+To change the number of workers, RAM/CPU allocation, or the default `NUM_RUNS`:
+
+Edit `scripts/benchmark_orchestrator.sh`:
 ```bash
 MAX_WORKERS=1
 NUM_RUNS=2
@@ -71,8 +75,8 @@ Then run to verify everything works in ~10 minutes.
 ### 4. Run Without Docker (Legacy Mode)
 
 ```bash
-cd scripts
-./run_battery.sh
+# Inside docker via terminal:
+./benchmark_worker.sh
 ```
 
 Runs the full matrix sequentially on your host. Set `BENCHMARK_HEADLESS=1` to disable GUI.
@@ -94,7 +98,7 @@ python scripts/analyze_results.py --summary_file ./results/battery_summary_20260
 
 ## Configuration Reference
 
-### `scripts/parallel_runner.sh` — Orchestrator
+### `scripts/benchmark_orchestrator.sh` — Orchestrator
 
 | Variable | Default | Description |
 |---|---|---|
@@ -107,7 +111,7 @@ python scripts/analyze_results.py --summary_file ./results/battery_summary_20260
 | `LOCAL_PLANNERS` | dwa, apf | Local planners |
 | `SWEEP_rrt` | 10.0:20.0:30.0 | RRT step size sweep (colon-separated) |
 
-### `scripts/run_battery.sh` — Battery Runner
+### `scripts/benchmark_worker.sh` — Battery Runner
 
 | Variable | Default | Description |
 |---|---|---|
@@ -157,7 +161,7 @@ python generate_pedestrian_config.py <map.yaml> --num_peds 5 --robot_x 1.0 --rob
 Set `BENCHMARK_HEADLESS=1` to disable Gazebo GUI and RViz:
 ```bash
 export BENCHMARK_HEADLESS=1
-./scripts/run_battery.sh
+./scripts/benchmark_worker.sh
 ```
 
 This is set automatically inside Docker containers.
@@ -243,13 +247,13 @@ Each container gets:
 
 | Script | Purpose |
 |---|---|
-| `parallel_runner.sh` | **Main entry point**: Docker orchestrator |
-| `run_battery.sh` | Test battery (Docker single-planner or legacy full matrix) |
-| `generate_random_poses.py` | Safe start/goal sampling from occupancy grid |
-| `generate_pedestrian_config.py` | Generate N-pedestrian YAML configs |
-| `analyze_results.py` | Merge CSVs + statistical tests + plots |
-| `killpro.sh` | Kill ROS/Gazebo processes between runs |
-| `main.sh` | Launch ROS simulation stack |
+| `benchmark_orchestrator.sh` | **Main entry point**: Docker orchestrator |
+| `benchmark_worker.sh` | Test battery (Docker single-planner or legacy full matrix) |
+| `generate_random_poses.py` | Generate safe `(x, y)` pairs for Start and Goal |
+| `generate_pedestrian_config.py` | Generate starting locations for wandering pedestrians |
+| `analyze_results.py` | Aggregate CSVs, calculate stats, plot charts |
+| `cleanup_processes.sh` | Kill ROS/Gazebo processes between runs |
+| `launch_simulator.sh` | Launch ROS simulation stack |
 | `build.sh` | Build the catkin workspace |
 
 ---
