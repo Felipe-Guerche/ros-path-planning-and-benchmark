@@ -120,8 +120,13 @@ for scenario in "${SCENARIOS[@]}"; do
                             echo "    Run $i / $NUM_RUNS (Peds=$ped_count, Sweep=$sweep_val, Infl=$inflation)"
                             echo "------------------------------------------"
                             
-                            # Generate Random Start and Goal (with seed logging)
-                            SEED=$RANDOM$RANDOM
+                            # Generate reproducible Seed based on MASTER_SEED + run index $i
+                            if [ -n "$MASTER_SEED" ] && [ "$MASTER_SEED" != "random" ]; then
+                                # We add 'i' to ensure each run within the 50 has a unique but reproducible seed
+                                SEED=$((MASTER_SEED + i))
+                            else
+                                SEED=$RANDOM$RANDOM
+                            fi
 
                             # Generate pedestrian config FIRST (so pose gen can exclude ped zones)
                             if [ "$scenario" == "dynamic" ] && [ "$ped_count" != "0" ]; then

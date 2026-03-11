@@ -61,3 +61,6 @@ CATKIN_IGNORE
 3rd/*.cmake
 3rd/*.json
 3rd/conanbuildinfo.txt
+
+# Benchmark Results
+results/

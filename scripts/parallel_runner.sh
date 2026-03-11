@@ -10,6 +10,9 @@
 
 set -e
 
+# Change to the root workspace folder to ensure all paths resolve correctly
+cd "$(dirname "$0")/.."
+
 # ===================== MODULAR CONFIGURATION =====================
 
 # Docker image name
@@ -19,9 +22,9 @@ DOCKERFILE_PATH="./docker/noetic"
 # --- Hardware Budget ---
 # Adjust these to your machine. The script will launch MAX_WORKERS
 # containers, each limited to CPUS_PER_WORKER cores and RAM_PER_WORKER memory.
-MAX_WORKERS=3              # Number of parallel containers
-CPUS_PER_WORKER="4.0"      # CPU threads per container (docker --cpus)
-RAM_PER_WORKER="8g"        # RAM per container (docker --memory)
+MAX_WORKERS=4              # Number of parallel containers
+CPUS_PER_WORKER="3.0"      # CPU threads per container (docker --cpus)
+RAM_PER_WORKER="6g"        # RAM per container (docker --memory)
 
 # --- Benchmark Matrix ---
 # Each combination of (SCENARIO, GLOBAL, LOCAL) becomes a "job".
@@ -29,7 +32,12 @@ RAM_PER_WORKER="8g"        # RAM per container (docker --memory)
 SCENARIOS=("static" "dynamic")
 GLOBAL_PLANNERS=("astar" "hybrid_astar" "dijkstra" "lazy_theta_star" "dstar_lite" "rrt")
 LOCAL_PLANNERS=("dwa" "apf")
-NUM_RUNS=30                # Repetitions per job
+NUM_RUNS=100                # Repetitions per job
+
+# --- Randomization & Reproducibility ---
+# Set to a number (e.g., 42) to force the exact same obstacle and start/goal
+# positions across all planners. Set to "random" for a new random sequence.
+MASTER_SEED="random"
 
 # --- Parameter Sweep ---
 # Define sweep values per global planner. Use "default" for no sweep.
@@ -49,6 +57,11 @@ mkdir -p "$RESULTS_DIR"
 
 # =================================================================
 
+# Resolve Master Seed
+if [ "$MASTER_SEED" == "random" ]; then
+    MASTER_SEED=$RANDOM
+fi
+
 echo "============================================="
 echo "  Parallel Benchmark Orchestrator"
 echo "============================================="
@@ -56,8 +69,12 @@ echo "  Workers      : $MAX_WORKERS"
 echo "  CPUs/Worker  : $CPUS_PER_WORKER"
 echo "  RAM/Worker   : $RAM_PER_WORKER"
 echo "  Runs/Job     : $NUM_RUNS"
+echo "  Master Seed  : $MASTER_SEED"
 echo "  Results Dir  : $RESULTS_DIR"
 echo "============================================="
+
+# Record the start time
+START_TIME=$(date +%s)
 
 # --- Step 1: Build Docker Image ---
 echo ""
@@ -112,6 +129,7 @@ dispatch_job() {
         -e SCENARIO="$scenario" \
         -e NUM_RUNS="$NUM_RUNS" \
         -e SWEEP_VALUES="$sweep_vals" \
+        -e MASTER_SEED="$MASTER_SEED" \
         -e ROS_MASTER_PORT="$ros_port" \
         -e GAZEBO_MASTER_PORT="$gazebo_port" \
         -v "$RESULTS_DIR:/project/src/plannie-main/results" \
@@ -158,10 +176,23 @@ done
 # --- Step 4: Aggregate Results ---
 echo ""
 echo "[3/3] Aggregating results..."
+
+# Fix permissions for files created by docker (root) before analyzing locally
+docker run --rm --entrypoint /bin/chown -v "$RESULTS_DIR:/results" ubuntu -R $(id -u):$(id -g) /results > /dev/null 2>&1 || true
+
 python scripts/analyze_results.py --results_dir "$RESULTS_DIR" --plot --plot_dir "$RESULTS_DIR/figures"
 
 echo ""
 echo "============================================="
 echo "  All benchmarks complete!"
 echo "  Results: $RESULTS_DIR"
+
+# Calculate total execution time
+END_TIME=$(date +%s)
+TOTAL_SECONDS=$((END_TIME - START_TIME))
+HOURS=$((TOTAL_SECONDS / 3600))
+MINUTES=$(( (TOTAL_SECONDS % 3600) / 60 ))
+SECONDS=$((TOTAL_SECONDS % 60))
+
+echo "  Total Time: ${HOURS}h ${MINUTES}m ${SECONDS}s"
 echo "============================================="
