@@ -30,19 +30,28 @@ constexpr int win_size = 70;
  * @param costmap   the environment for path planning
  */
 LPAStarPathPlanner::LPAStarPathPlanner(costmap_2d::Costmap2DROS* costmap_ros)
-  : PathPlanner(costmap_ros) {
-  curr_global_costmap_ = new unsigned char[map_size_];
-  last_global_costmap_ = new unsigned char[map_size_];
+  : PathPlanner(costmap_ros), map_initialized_(false) {
   start_.set_x(std::numeric_limits<int>::max());
   start_.set_y(std::numeric_limits<int>::max());
   goal_.set_x(std::numeric_limits<int>::max());
   goal_.set_y(std::numeric_limits<int>::max());
-  initMap();
 }
 
 LPAStarPathPlanner::~LPAStarPathPlanner() {
-  delete curr_global_costmap_;
-  delete last_global_costmap_;
+  if (map_initialized_) {
+    delete[] curr_global_costmap_;
+    delete[] last_global_costmap_;
+  }
+  // Clean up map_ if it was initialized
+  if (map_initialized_) {
+    for (int i = 0; i < nx_; ++i) {
+      for (int j = 0; j < ny_; ++j) {
+        delete map_[i][j];
+      }
+      delete[] map_[i];
+    }
+    delete[] map_;
+  }
 }
 
 /**
@@ -288,6 +297,12 @@ LPAStarPathPlanner::LNode LPAStarPathPlanner::getState(const LNode& current) {
  */
 bool LPAStarPathPlanner::plan(const Point3d& start, const Point3d& goal, Points3d* path,
                               Points3d* expand) {
+  if (!map_initialized_) {
+     curr_global_costmap_ = new unsigned char[map_size_];
+     last_global_costmap_ = new unsigned char[map_size_];
+     initMap();
+     map_initialized_ = true;
+  }
   // update costmap
   memcpy(last_global_costmap_, curr_global_costmap_, map_size_);
   memcpy(curr_global_costmap_, costmap_->getCharMap(), map_size_);

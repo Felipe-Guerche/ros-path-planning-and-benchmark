@@ -30,19 +30,18 @@ constexpr int win_size = 70;
  * @param costmap   the environment for path planning
  */
 DStarLitePathPlanner::DStarLitePathPlanner(costmap_2d::Costmap2DROS* costmap_ros)
-  : PathPlanner(costmap_ros) {
-  curr_global_costmap_ = new unsigned char[map_size_];
-  last_global_costmap_ = new unsigned char[map_size_];
+  : PathPlanner(costmap_ros), map_initialized_(false) {
   start_.set_x(std::numeric_limits<int>::max());
   start_.set_y(std::numeric_limits<int>::max());
   goal_.set_x(std::numeric_limits<int>::max());
   goal_.set_y(std::numeric_limits<int>::max());
-  initMap();
 }
 
 DStarLitePathPlanner::~DStarLitePathPlanner() {
-  delete curr_global_costmap_;
-  delete last_global_costmap_;
+  if (map_initialized_) {
+    delete[] curr_global_costmap_;
+    delete[] last_global_costmap_;
+  }
 }
 
 /**
@@ -301,6 +300,12 @@ DStarLitePathPlanner::LNode DStarLitePathPlanner::getState(const LNode& current)
  */
 bool DStarLitePathPlanner::plan(const Point3d& start, const Point3d& goal, Points3d* path,
                                 Points3d* expand) {
+  if (!map_initialized_) {
+     curr_global_costmap_ = new unsigned char[map_size_];
+     last_global_costmap_ = new unsigned char[map_size_];
+     initMap();
+     map_initialized_ = true;
+  }
   double m_start_x, m_start_y, m_goal_x, m_goal_y;
   if ((!validityCheck(start.x(), start.y(), m_start_x, m_start_y)) ||
       (!validityCheck(goal.x(), goal.y(), m_goal_x, m_goal_y))) {

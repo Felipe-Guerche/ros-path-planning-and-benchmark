@@ -180,7 +180,8 @@ public:
             common::geometry::Points3d* path, common::geometry::Points3d* expand);
 
 public:
-  // start and goal ptr
+  // start and goal public:
+  bool map_initialized_;
   unsigned char* curr_global_costmap_;         // current global costmap
   unsigned char* last_global_costmap_;         // last global costmap
   LNodePtr** map_;                             // grid pointer map

@@ -55,6 +55,15 @@ export SINGLE_SCENARIO="${SCENARIO}"
 export SINGLE_NUM_RUNS="${NUM_RUNS}"
 export SINGLE_SWEEP_VALUES="${SWEEP_VALUES}"
 
+# Support Conan external dependencies for Pluginlib (libglog.so, etc)
+echo "Looking for Conan dependencies in /root/.conan/data..."
+CONAN_LIB_DIRS=$(find /root/.conan/data/ -type d -name "lib" 2>/dev/null || true)
+CONAN_PATHS=""
+for dir in $CONAN_LIB_DIRS; do
+  CONAN_PATHS="${dir}:${CONAN_PATHS}"
+done
+export LD_LIBRARY_PATH="${CONAN_PATHS}${LD_LIBRARY_PATH}"
+
 # Start virtual framebuffer for headless Gazebo
 Xvfb :99 -screen 0 1024x768x16 &
 export DISPLAY=:99
