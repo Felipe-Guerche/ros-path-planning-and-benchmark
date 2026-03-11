@@ -39,9 +39,7 @@ RUN echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
 COPY . /project
 
 # catkin build
-RUN cd ./3rd && source ./conan_install.sh && cd ../ && source /opt/ros/noetic/setup.bash && catkin_make
-
-# Make scripts executable
+RUN source /opt/ros/noetic/setup.bash && cd /project/scripts && bash ./build.sh
 RUN chmod +x /project/scripts/*.sh /project/docker/noetic/docker_entrypoint.sh
 
 ENTRYPOINT ["/project/docker/noetic/docker_entrypoint.sh"]
