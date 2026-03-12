@@ -32,7 +32,7 @@ RAM_PER_WORKER="6g"        # RAM per container (docker --memory)
 SCENARIOS=("static" "dynamic")
 GLOBAL_PLANNERS=("astar" "hybrid_astar" "dijkstra" "lazy_theta_star" "dstar_lite" "rrt")
 LOCAL_PLANNERS=("dwa" "apf")
-NUM_RUNS=100                # Repetitions per job
+NUM_RUNS=50                # Repetitions per job
 
 # --- Randomization & Reproducibility ---
 # Set to a number (e.g., 42) to force the exact same obstacle and start/goal
