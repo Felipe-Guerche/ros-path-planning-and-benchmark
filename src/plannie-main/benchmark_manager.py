@@ -4,6 +4,7 @@ import time
 import psutil
 import math
 import os
+import threading
 import actionlib
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped
@@ -56,6 +57,11 @@ class BenchmarkManager:
         # Start Benchmark
         rospy.sleep(1.0)
         self.start_benchmark()
+
+        # Watchdog: guarantees shutdown even if /odom stops publishing (frozen Gazebo).
+        self._watchdog = threading.Timer(self.max_timeout, self._watchdog_timeout)
+        self._watchdog.daemon = True
+        self._watchdog.start()
         
     def find_move_base_process(self):
         for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
@@ -71,17 +77,24 @@ class BenchmarkManager:
                 pass
         return None
 
-    def wait_for_sim_time(self, target_time):
+    def wait_for_sim_time(self, target_time: float) -> None:
         rospy.loginfo(f"Waiting for simulation time to reach {target_time}s...")
         rate = rospy.Rate(10)
+        wall_deadline = time.time() + self.max_timeout
         while not rospy.is_shutdown():
+            if time.time() > wall_deadline:
+                rospy.logerr(
+                    f"wait_for_sim_time: sim clock did not reach {target_time}s within "
+                    f"{self.max_timeout}s wall-clock. Aborting benchmark."
+                )
+                rospy.signal_shutdown("Sim clock timeout")
+                return
             current_time = rospy.Time.now().to_sec()
             if current_time >= target_time:
                 rospy.loginfo(f"Target time reached! (Current: {current_time:.2f}s)")
                 break
-            # Warn if we are close to timeout or something? No, just wait.
             rate.sleep()
-        
+
     def start_benchmark(self):
         rospy.loginfo(f"Starting benchmark for planner: {self.planner_name}")
         self.is_running = True
@@ -175,12 +188,58 @@ class BenchmarkManager:
             self.client.cancel_all_goals()
             self.finish_benchmark(False)
 
+<<<<<<< Updated upstream
+=======
+    def compute_smoothness(self):
+        """Compute path smoothness as sum of absolute angular changes (radians)."""
+        if len(self.trajectory) < 3:
+            return 0.0
+        total_angle_change = 0.0
+        for i in range(1, len(self.trajectory) - 1):
+            x0, y0 = self.trajectory[i-1]
+            x1, y1 = self.trajectory[i]
+            x2, y2 = self.trajectory[i+1]
+            dx1, dy1 = x1 - x0, y1 - y0
+            dx2, dy2 = x2 - x1, y2 - y1
+            angle1 = math.atan2(dy1, dx1)
+            angle2 = math.atan2(dy2, dx2)
+            diff = abs(angle2 - angle1)
+            if diff > math.pi:
+                diff = 2 * math.pi - diff
+            total_angle_change += diff
+        return total_angle_change
+
+    def _watchdog_timeout(self):
+        if not self.finished:
+            rospy.logwarn(
+                f"Watchdog: benchmark_manager did not finish within {self.max_timeout}s "
+                "(possible frozen Gazebo/odometry). Forcing FAILURE."
+            )
+            self.client.cancel_all_goals()
+            self.finish_benchmark(False)
+
+>>>>>>> Stashed changes
     def finish_benchmark(self, success):
         self.finished = True
+<<<<<<< Updated upstream
         end_time = time.time()
         duration = end_time - self.start_time
         
         rospy.loginfo(f"Benchmark finished! Success: {success}")
+=======
+        self.is_running = False
+
+        # Cancel the watchdog so it does not fire after a clean finish
+        if hasattr(self, '_watchdog'):
+            self._watchdog.cancel()
+
+        end_time = time.time()
+        # start_time can be None if watchdog fires before start_benchmark() runs
+        duration = (end_time - self.start_time) if self.start_time is not None else 0.0
+        self.smoothness = self.compute_smoothness()
+
+        rospy.loginfo(f"Benchmark finished! Success: {success} | Smoothness: {self.smoothness:.4f} rad")
+>>>>>>> Stashed changes
         self.save_results(success, duration)
         rospy.signal_shutdown("Benchmark Complete")
 
