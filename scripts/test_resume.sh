@@ -1,79 +1,5 @@
 #!/bin/bash
 
-<<<<<<< Updated upstream
-# Default Parameters
-PLANNER="astar"
-GOAL_X="8.5"
-GOAL_Y="-4.0"
-
-# Parse Arguments
-while [[ $# -gt 0 ]]; do
-  case $1 in
-    --planner)
-      PLANNER="$2"
-      shift 2
-      ;;
-    --x)
-      GOAL_X="$2"
-      shift 2
-      ;;
-    --y)
-      GOAL_Y="$2"
-      shift 2
-      ;;
-    *)
-      echo "Unknown argument: $1"
-      echo "Usage: $0 [--planner NAME] [--x X_COORD] [--y Y_COORD]"
-      exit 1
-      ;;
-  esac
-done
-
-echo "=========================================="
-echo "Automated Benchmark Script"
-echo "Planner: $PLANNER"
-echo "Goal: ($GOAL_X, $GOAL_Y)"
-echo "=========================================="
-
-# 1. Cleanup
-echo "[1/4] Cleaning up previous processes..."
-./killpro.sh > /dev/null 2>&1
-sleep 5
-
-# 2. Start Simulation
-echo "[2/4] Starting Simulation..."
-./main.sh > /dev/null 2>&1 &
-SIM_PID=$!
-echo "Simulation started (PID: $SIM_PID)"
-
-# 3. Wait for Readiness
-echo "[3/4] Waiting for Move Base to be ready..."
-source ../devel/setup.bash
-TIMEOUT=300
-START_WAIT=$(date +%s)
-READY=false
-
-while true; do
-    # Check if we can contact master
-    if rostopic list > /dev/null 2>&1; then
-        # Check if move_base action server is registered
-        if rostopic list | grep -q "/move_base/status"; then
-            READY=true
-            break
-        fi
-    fi
-    
-    CURRENT_TIME=$(date +%s)
-    ELAPSED=$((CURRENT_TIME - START_WAIT))
-    
-    if [ $ELAPSED -gt $TIMEOUT ]; then
-        echo "Timeout waiting for simulation!"
-        ./killpro.sh
-        exit 1
-    fi
-    
-    sleep 2
-=======
 # =============================================================================
 #  Parallel Benchmark Runner (Orchestrator)
 #  Builds the Docker image once and launches N containers in parallel,
@@ -104,14 +30,14 @@ RAM_PER_WORKER="6g"        # RAM per container (docker --memory)
 # Each combination of (SCENARIO, GLOBAL, LOCAL) becomes a "job".
 # Jobs are queued and dispatched to workers as they become available.
 SCENARIOS=("static" "dynamic")
-GLOBAL_PLANNERS=("astar" "hybrid_astar" "dijkstra" "lazy_theta_star" "dstar_lite" "rrt")
-LOCAL_PLANNERS=("dwa" "apf")
-NUM_RUNS=50                # Repetitions per job
+GLOBAL_PLANNERS=("astar")
+LOCAL_PLANNERS=("dwa")
+NUM_RUNS=2                # Repetitions per job
 
 # --- Randomization & Reproducibility ---
 # Set to a number (e.g., 42) to force the exact same obstacle and start/goal
 # positions across all planners. Set to "random" for a new random sequence.
-MASTER_SEED=16544
+MASTER_SEED="random"
 
 # --- Parameter Sweep ---
 # Define sweep values per global planner. Use "default" for no sweep.
@@ -220,7 +146,7 @@ dispatch_job() {
         local n_inflations=3
         local n_sweeps=$(echo "$sweep_vals" | tr ':' '\n' | wc -l)
         [ "$sweep_vals" == "default" ] && n_sweeps=1
-
+        
         local expected=$(( (n_peds * n_sweeps * n_inflations * NUM_RUNS) + 1 ))
         local actual=$(wc -l < "$summary_file")
 
@@ -228,7 +154,6 @@ dispatch_job() {
             echo "  [Skip] Job $job_tag is already complete ($actual/$expected rows)."
             return 0
         else
-            # Keep the CSV: pass completed run count so worker skips already-done rows.
             local completed_runs=$(( actual - 1 ))
             [ "$completed_runs" -lt 0 ] && completed_runs=0
             echo "  [Resume] Job $job_tag is partial ($actual/$expected rows). Resuming from row $((completed_runs + 1))..."
@@ -283,12 +208,10 @@ wait_for_slot() {
 # Dispatch all jobs
 for job in "${JOBS[@]}"; do
     wait_for_slot
+    prev_count=${#RUNNING_PIDS[@]}
     dispatch_job "$job" "$WORKER_ID"
-    # Only advance WORKER_ID when a container was actually dispatched.
-    # dispatch_job returns 0 on skip without adding to RUNNING_PIDS,
-    # so check whether the PID array grew.
-    local prev_count=${#RUNNING_PIDS[@]}
-    if [ ${#RUNNING_PIDS[@]} -gt $prev_count ] 2>/dev/null || true; then
+    # Only advance WORKER_ID when a container was actually dispatched
+    if [ ${#RUNNING_PIDS[@]} -gt $prev_count ]; then
         WORKER_ID=$(( (WORKER_ID + 1) % MAX_WORKERS ))
     fi
     JOB_INDEX=$((JOB_INDEX + 1))
@@ -300,19 +223,28 @@ echo ""
 echo "All jobs dispatched. Waiting for remaining workers to finish..."
 for pid in "${RUNNING_PIDS[@]}"; do
     wait "$pid" 2>/dev/null || true
->>>>>>> Stashed changes
 done
 
-echo "System Ready! Resetting AMCL pose to (0,0)..."
-rostopic pub -1 /initialpose geometry_msgs/PoseWithCovarianceStamped "{header: {frame_id: 'map'}, pose: {pose: {position: {x: 0.0, y: 0.0, z: 0.0}, orientation: {w: 1.0}}}}" > /dev/null 2>&1
-sleep 5 # Give AMCL time to settle
+# --- Step 4: Aggregate Results ---
+echo ""
+echo "[3/3] Aggregating results..."
 
-# 4. Run Benchmark
-echo "[4/4] Running Benchmark..."
-source ../devel/setup.bash
-roslaunch plannie benchmark.launch planner:=$PLANNER goal_x:=$GOAL_X goal_y:=$GOAL_Y
+# Fix permissions for files created by docker (root) before analyzing locally
+docker run --rm --entrypoint /bin/chown -v "$RESULTS_DIR:/results" ubuntu -R $(id -u):$(id -g) /results > /dev/null 2>&1 || true
 
-# Cleanup after finish
-echo "Benchmark completed."
-# Optional: Uncomment to kill simulation after run
-# ./killpro.sh
+python scripts/analyze_results.py --results_dir "$RESULTS_DIR" --plot --plot_dir "$RESULTS_DIR/figures"
+
+echo ""
+echo "============================================="
+echo "  All benchmarks complete!"
+echo "  Results: $RESULTS_DIR"
+
+# Calculate total execution time
+END_TIME=$(date +%s)
+TOTAL_SECONDS=$((END_TIME - START_TIME))
+HOURS=$((TOTAL_SECONDS / 3600))
+MINUTES=$(( (TOTAL_SECONDS % 3600) / 60 ))
+SECONDS=$((TOTAL_SECONDS % 60))
+
+echo "  Total Time: ${HOURS}h ${MINUTES}m ${SECONDS}s"
+echo "============================================="
