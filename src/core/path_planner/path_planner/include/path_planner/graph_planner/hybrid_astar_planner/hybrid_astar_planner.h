@@ -52,7 +52,7 @@ public:
   /**
    * @brief Destory the Hybrid A* object
    */
-  ~HybridAStarPathPlanner() = default;
+  virtual ~HybridAStarPathPlanner();
 
   /**
    * @brief Creates a path between the start and goal points while expanding nodes.

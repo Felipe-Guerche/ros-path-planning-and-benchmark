@@ -366,6 +366,9 @@ NodeHybrid::NodePtr HybridAStarPathPlanner::tryAnalyticExpansion(
   Point3d to(goal->pose().x(), goal->pose().y(),
              motion_table_.getAngleFromBin(goal->pose().theta()));
   if (motion_table_.curve_gen->generation(from, to, motion_path)) {
+    for (auto node : expansions_node_) {
+      delete node;
+    }
     expansions_node_.clear();
     NodeHybrid::NodePtr prev = node;
     for (size_t i = 1; i < motion_path.size() - 1; i++) {
@@ -471,6 +474,11 @@ NodeHybrid::NodePtr HybridAStarPathPlanner::addToGraph(const uint64_t& index) {
  * @brief Clear graph of nodes searched
  */
 void HybridAStarPathPlanner::clearGraph() {
+  for (auto node : expansions_node_) {
+    delete node;
+  }
+  expansions_node_.clear();
+
   Graph g;
   std::swap(graph_, g);
   graph_.reserve(hybrid_astar_config_.default_graph_size());

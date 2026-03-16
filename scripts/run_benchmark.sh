@@ -119,12 +119,15 @@ RUNNING_PIDS=()
 cleanup_on_exit() {
     echo ""
     echo "[State] Interrupt received. Killing background workers..."
+    # 1. Kill the shell background pids
     for pid in "${RUNNING_PIDS[@]}"; do
         if kill -0 "$pid" 2>/dev/null; then
-            docker ps --filter "name=benchmark_" -q | xargs -r docker rm -f || true
             kill "$pid" 2>/dev/null || true
         fi
     done
+    # 2. Kill any docker container starting with 'benchmark_'
+    docker ps --filter "name=benchmark_" -q | xargs -r docker rm -f >/dev/null 2>&1 || true
+    echo "[State] Cleanup complete."
     exit 1
 }
 trap cleanup_on_exit SIGINT SIGTERM
