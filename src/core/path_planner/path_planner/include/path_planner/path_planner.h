@@ -150,14 +150,22 @@ protected:
   std::vector<Node> _convertClosedListToPath(std::unordered_map<int, Node>& closed_list,
                                              const Node& start, const Node& goal) {
     std::vector<Node> path;
-    auto current = closed_list.find(goal.id());
+    auto it = closed_list.find(goal.id());
+    if (it == closed_list.end()) {
+      R_ERROR << "Failed to reconstruct path: Goal not in closed list.";
+      return {};
+    }
+
+    auto current = it;
     while (current->second != start) {
       path.emplace_back(current->second.x(), current->second.y());
-      auto it = closed_list.find(current->second.pid());
-      if (it != closed_list.end())
-        current = it;
-      else
+      auto next_it = closed_list.find(current->second.pid());
+      if (next_it != closed_list.end() && next_it != current) {
+        current = next_it;
+      } else {
+        R_ERROR << "Failed to reconstruct path: Disconnected or cyclicity detected.";
         return {};
+      }
     }
     path.push_back(start);
     return path;
@@ -174,11 +182,14 @@ protected:
     std::vector<Node> path, path_b;
 
     // backward
-    auto current = b_closed_list.find(boundary.id());
+    auto it_boundary = b_closed_list.find(boundary.id());
+    if (it_boundary == b_closed_list.end()) return {};
+
+    auto current = it_boundary;
     while (current->second != goal) {
       path_b.push_back(current->second);
       auto it = b_closed_list.find(current->second.pid());
-      if (it != b_closed_list.end())
+      if (it != b_closed_list.end() && it != current)
         current = it;
       else
         return {};

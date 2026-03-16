@@ -246,6 +246,7 @@ HybridAStarPathPlanner::getObstacleHeuristic(const NodeHybrid::NodePtr& node) co
 
   if (x < 0 || x >= width || y < 0 || y >= height) {
     R_ERROR << "Position at " << x << ", " << y << " is out of the map.";
+    return 0.0;
   }
 
   return obstacle_hmap_[y][x];
@@ -432,6 +433,9 @@ void HybridAStarPathPlanner::getNeighbors(const NodeHybrid::NodePtr& node,
   const auto& projections = motion_table_.getMotionPrimitives(node->pose());
   for (size_t i = 0; i < projections.size(); ++i) {
     Point3d new_pose(projections[i].x(), projections[i].y(), projections[i].theta());
+    if (new_pose.x() < 0 || new_pose.x() >= costmap_->getSizeInCellsX() || new_pose.y() < 0 ||
+        new_pose.y() >= costmap_->getSizeInCellsY())
+      continue;
     const int index = getIndex(new_pose);
     if (index < max_index) {
       neighbor = addToGraph(index);

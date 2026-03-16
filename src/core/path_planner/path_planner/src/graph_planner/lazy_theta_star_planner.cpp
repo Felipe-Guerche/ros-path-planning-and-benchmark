@@ -99,10 +99,11 @@ bool LazyThetaStarPathPlanner::plan(const Point3d& start, const Point3d& goal,
       // path 1
       auto node_new = current + m;  // add the .x(), .y(), g_
       node_new.set_g(current.g() + m.g());
-      node_new.set_h(
-          std::hypot(node_new.x() - goal_node.x(), node_new.y() - goal_node.y()));
+      // next node hit the boundary or obstacle
+      if (node_new.x() < 0 || node_new.x() >= nx_ || node_new.y() < 0 || node_new.y() >= ny_)
+        continue;
+
       node_new.set_id(grid2Index(node_new.x(), node_new.y()));
-      node_new.set_pid(current.id());
 
       // current node do not exist in closed list
       if (closed_list_.find(node_new.id()) != closed_list_.end())
@@ -182,6 +183,8 @@ void LazyThetaStarPathPlanner::_setVertex(Node& node) {
     node.set_g(std::numeric_limits<double>::max());
     for (const auto& m : motions) {
       auto parent_new = node + m;
+      if (parent_new.x() < 0 || parent_new.x() >= nx_ || parent_new.y() < 0 || parent_new.y() >= ny_)
+        continue;
       parent_new.set_id(grid2Index(parent_new.x(), parent_new.y()));
       auto find_parent_new = closed_list_.find(parent_new.id());
 

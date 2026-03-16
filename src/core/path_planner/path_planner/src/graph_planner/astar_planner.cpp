@@ -115,6 +115,11 @@ bool AStarPathPlanner::plan(const Point3d& start, const Point3d& goal, Points3d*
       // explore a new node
       auto node_new = current + motion;
       node_new.set_g(current.g() + motion.g());
+      // next node hit the boundary or obstacle
+      // prevent planning failed when the current within inflation
+      if (node_new.x() < 0 || node_new.x() >= nx_ || node_new.y() < 0 || node_new.y() >= ny_)
+        continue;
+
       node_new.set_id(grid2Index(node_new.x(), node_new.y()));
 
       // node_new in closed list
@@ -124,8 +129,6 @@ bool AStarPathPlanner::plan(const Point3d& start, const Point3d& goal, Points3d*
 
       node_new.set_pid(current.id());
 
-      // next node hit the boundary or obstacle
-      // prevent planning failed when the current within inflation
       if ((node_new.id() < 0) || (node_new.id() >= map_size_) ||
           (costmap_->getCharMap()[node_new.id()] >=
                costmap_2d::LETHAL_OBSTACLE * config_.obstacle_inflation_factor() &&

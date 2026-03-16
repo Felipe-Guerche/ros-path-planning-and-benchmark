@@ -94,10 +94,13 @@ bool ThetaStarPathPlanner::plan(const Point3d& start, const Point3d& goal, Point
     for (const auto& m : motions) {
       // explore a new node
       // path 1
-      auto node_new = current + m;  // add the x_, y_, g_
+      auto node_new = current + m;
       node_new.set_g(current.g() + m.g());
-      node_new.set_h(
-          std::hypot(node_new.x() - goal_node.x(), node_new.y() - goal_node.y()));
+      node_new.set_h(std::hypot(node_new.x() - goal_node.x(), node_new.y() - goal_node.y()));
+      // next node hit the boundary or obstacle
+      if (node_new.x() < 0 || node_new.x() >= nx_ || node_new.y() < 0 || node_new.y() >= ny_)
+        continue;
+
       node_new.set_id(grid2Index(node_new.x(), node_new.y()));
       node_new.set_pid(current.id());
 
