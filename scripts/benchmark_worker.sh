@@ -198,7 +198,7 @@ for scenario in "${SCENARIOS[@]}"; do
                             # Wait for Readiness
                             echo "[3/4] Waiting for System..."
                             source ../devel/setup.bash
-                            TIMEOUT=300
+                            TIMEOUT=450
                             START_WAIT=$(date +%s)
                             READY=false
                             

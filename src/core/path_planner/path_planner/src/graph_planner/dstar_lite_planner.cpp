@@ -41,6 +41,14 @@ DStarLitePathPlanner::~DStarLitePathPlanner() {
   if (map_initialized_) {
     delete[] curr_global_costmap_;
     delete[] last_global_costmap_;
+
+    for (int i = 0; i < nx_; i++) {
+      for (int j = 0; j < ny_; j++) {
+        delete map_[i][j];
+      }
+      delete[] map_[i];
+    }
+    delete[] map_;
   }
 }
 
