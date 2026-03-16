@@ -37,7 +37,7 @@ NUM_RUNS=50                # Repetitions per job
 # --- Randomization & Reproducibility ---
 # Set to a number (e.g., 42) to force the exact same obstacle and start/goal
 # positions across all planners. Set to "random" for a new random sequence.
-MASTER_SEED="random"
+MASTER_SEED=16544
 
 # --- Parameter Sweep ---
 # Define sweep values per global planner. Use "default" for no sweep.
@@ -57,9 +57,26 @@ mkdir -p "$RESULTS_DIR"
 
 # =================================================================
 
-# Resolve Master Seed
+# =================================================================
+# Resolve Master Seed (with Persistence for Pause & Resume)
+# =================================================================
+SEED_FILE="$RESULTS_DIR/.master_seed"
+
 if [ "$MASTER_SEED" == "random" ]; then
-    MASTER_SEED=$RANDOM
+    if [ -f "$SEED_FILE" ]; then
+        # Load existing seed to maintain parity with cached jobs
+        MASTER_SEED=$(cat "$SEED_FILE")
+        echo "[State] Resuming with persisted random seed: $MASTER_SEED"
+    else
+        # Initialize new run and persist seed
+        MASTER_SEED=$RANDOM
+        echo "$MASTER_SEED" > "$SEED_FILE"
+        echo "[State] Generated and persisted new random seed: $MASTER_SEED"
+    fi
+else
+    # Enforce explicit seed and sync to state file
+    echo "$MASTER_SEED" > "$SEED_FILE"
+    echo "[State] Using explicit fixed seed: $MASTER_SEED"
 fi
 
 echo "============================================="
@@ -115,7 +132,37 @@ dispatch_job() {
 
     local ros_port=$((BASE_ROS_PORT + wid))
     local gazebo_port=$((BASE_GAZEBO_PORT + wid))
-    local container_name="benchmark_w${wid}_${scenario}_${global}_${local}"
+
+    # Create a deterministic tag for this job: scenario_global_local_sweep (first 3 chars)
+    local sweep_tag=$(echo "$sweep_vals" | cut -c1-3 | tr -d ':')
+    local job_tag="${scenario}_${global}_${local}_${sweep_tag}"
+    local container_name="benchmark_${job_tag}"
+
+    # --- Check if Job is already complete ---
+    local summary_file="$RESULTS_DIR/battery_summary_${job_tag}.csv"
+    if [ -f "$summary_file" ]; then
+        # Calculate expected lines: (Peds * Sweeps * Inflations * Runs) + 1
+        local n_peds=1; [ "$scenario" == "dynamic" ] && n_peds=3
+        local n_inflations=3
+        local n_sweeps=$(echo "$sweep_vals" | tr ':' '\n' | wc -l)
+        [ "$sweep_vals" == "default" ] && n_sweeps=1
+
+        local expected=$(( (n_peds * n_sweeps * n_inflations * NUM_RUNS) + 1 ))
+        local actual=$(wc -l < "$summary_file")
+
+        if [ "$actual" -ge "$expected" ]; then
+            echo "  [Skip] Job $job_tag is already complete ($actual/$expected rows)."
+            return 0
+        else
+            # Keep the CSV: pass completed run count so worker skips already-done rows.
+            local completed_runs=$(( actual - 1 ))
+            [ "$completed_runs" -lt 0 ] && completed_runs=0
+            echo "  [Resume] Job $job_tag is partial ($actual/$expected rows). Resuming from row $((completed_runs + 1))..."
+            RESUME_FROM_ROW="$completed_runs"
+        fi
+    else
+        RESUME_FROM_ROW=0
+    fi
 
     echo "  [Worker $wid] Starting: $scenario | $global + $local | sweep=$sweep_vals"
 
@@ -124,12 +171,14 @@ dispatch_job() {
         --cpus="$CPUS_PER_WORKER" \
         --memory="$RAM_PER_WORKER" \
         -e WORKER_ID="$wid" \
-        -e GLOBAL_PLANNER="$global" \
-        -e LOCAL_PLANNER="$local" \
-        -e SCENARIO="$scenario" \
-        -e NUM_RUNS="$NUM_RUNS" \
-        -e SWEEP_VALUES="$sweep_vals" \
+        -e SINGLE_GLOBAL_PLANNER="$global" \
+        -e SINGLE_LOCAL_PLANNER="$local" \
+        -e SINGLE_SCENARIO="$scenario" \
+        -e SINGLE_NUM_RUNS="$NUM_RUNS" \
+        -e SINGLE_SWEEP_VALUES="$sweep_vals" \
+        -e JOB_TAG="$job_tag" \
         -e MASTER_SEED="$MASTER_SEED" \
+        -e RESUME_FROM_ROW="${RESUME_FROM_ROW:-0}" \
         -e ROS_MASTER_PORT="$ros_port" \
         -e GAZEBO_MASTER_PORT="$gazebo_port" \
         -v "$RESULTS_DIR:/project/src/plannie-main/results" \
@@ -161,7 +210,13 @@ wait_for_slot() {
 for job in "${JOBS[@]}"; do
     wait_for_slot
     dispatch_job "$job" "$WORKER_ID"
-    WORKER_ID=$(( (WORKER_ID + 1) % MAX_WORKERS ))
+    # Only advance WORKER_ID when a container was actually dispatched.
+    # dispatch_job returns 0 on skip without adding to RUNNING_PIDS,
+    # so check whether the PID array grew.
+    local prev_count=${#RUNNING_PIDS[@]}
+    if [ ${#RUNNING_PIDS[@]} -gt $prev_count ] 2>/dev/null || true; then
+        WORKER_ID=$(( (WORKER_ID + 1) % MAX_WORKERS ))
+    fi
     JOB_INDEX=$((JOB_INDEX + 1))
     echo "      ($JOB_INDEX / $TOTAL_JOBS jobs dispatched)"
 done

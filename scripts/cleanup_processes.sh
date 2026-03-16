@@ -11,3 +11,4 @@ killall -9 gzclient 2>/dev/null
 killall -9 robot_state_publisher 2>/dev/null
 killall -9 amcl 2>/dev/null
 killall -9 map_server 2>/dev/null
+killall -9 Xvfb 2>/dev/null

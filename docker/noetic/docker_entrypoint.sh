@@ -21,11 +21,11 @@ source /project/devel/setup.bash 2>/dev/null || true
 # GAZEBO_MASTER_PORT - Port for gzserver (e.g., 11345)
 
 WORKER_ID="${WORKER_ID:-0}"
-GLOBAL_PLANNER="${GLOBAL_PLANNER:-astar}"
-LOCAL_PLANNER="${LOCAL_PLANNER:-dwa}"
-SCENARIO="${SCENARIO:-static}"
-NUM_RUNS="${NUM_RUNS:-30}"
-SWEEP_VALUES="${SWEEP_VALUES:-default}"
+GLOBAL_PLANNER="${SINGLE_GLOBAL_PLANNER:-${GLOBAL_PLANNER:-astar}}"
+LOCAL_PLANNER="${SINGLE_LOCAL_PLANNER:-${LOCAL_PLANNER:-dwa}}"
+SCENARIO="${SINGLE_SCENARIO:-${SCENARIO:-static}}"
+NUM_RUNS="${SINGLE_NUM_RUNS:-${NUM_RUNS:-30}}"
+SWEEP_VALUES="${SINGLE_SWEEP_VALUES:-${SWEEP_VALUES:-default}}"
 ROS_MASTER_PORT="${ROS_MASTER_PORT:-11311}"
 GAZEBO_MASTER_PORT="${GAZEBO_MASTER_PORT:-11345}"
 
@@ -54,6 +54,8 @@ export SINGLE_LOCAL_PLANNER="${LOCAL_PLANNER}"
 export SINGLE_SCENARIO="${SCENARIO}"
 export SINGLE_NUM_RUNS="${NUM_RUNS}"
 export SINGLE_SWEEP_VALUES="${SWEEP_VALUES}"
+export JOB_TAG="${JOB_TAG:-}"
+export RESUME_FROM_ROW="${RESUME_FROM_ROW:-0}"
 
 # Support Conan external dependencies for Pluginlib (libglog.so, etc)
 echo "Looking for Conan dependencies in /root/.conan/data..."

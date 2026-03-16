@@ -53,7 +53,14 @@ CONFIG_FILE="../src/user_config/user_config.yaml"
 PED_CONFIG_FILE="../src/user_config/pedestrian_config.yaml"
 MAP_FILE="../src/sim_env/maps/warehouse/warehouse.yaml"
 SYSTEM_CONFIG="../src/core/system_config/system_config/system_config.pb.txt"
-SUMMARY_FILE="$(pwd)/../src/plannie-main/results/battery_summary_$(date +%Y%m%d_%H%M%S).csv"
+
+# Unified Output: In Docker mode, use the Job Tag for persistence. 
+# In Legacy mode, keep the timestamp.
+if [ -n "$JOB_TAG" ]; then
+    SUMMARY_FILE="$(pwd)/../src/plannie-main/results/battery_summary_${JOB_TAG}.csv"
+else
+    SUMMARY_FILE="$(pwd)/../src/plannie-main/results/battery_summary_$(date +%Y%m%d_%H%M%S).csv"
+fi
 
 echo "=========================================="
 echo "      Benchmark Battery Suite"
@@ -69,6 +76,12 @@ echo "=========================================="
 
 # Note: CSV header is created by benchmark_manager.py on first write.
 # Do NOT create it here to avoid column mismatch.
+
+# Resume support: skip this many already-completed data rows.
+RESUME_FROM_ROW="${RESUME_FROM_ROW:-0}"
+GLOBAL_RUN_COUNT=0
+echo "[Resume] Skipping first $RESUME_FROM_ROW completed rows."
+
 
 for scenario in "${SCENARIOS[@]}"; do
     # Determine pedestrian counts for this scenario
@@ -115,15 +128,28 @@ for scenario in "${SCENARIOS[@]}"; do
 
                         echo ">>> Sweep=$sweep_val | Inflation=$inflation"
 
+                        # Build a numeric combination key so seeds are unique across
+                        # (sweep_val, inflation, ped_count) — not just across runs.
+                        COMBO_KEY=$(echo "${sweep_val}${inflation}${ped_count}" | cksum | awk '{print $1}')
+
                         for (( i=1; i<=NUM_RUNS; i++ )); do
+                            GLOBAL_RUN_COUNT=$((GLOBAL_RUN_COUNT + 1))
+
+                            # Skip runs already recorded in the CSV (resume mode).
+                            if [ "$GLOBAL_RUN_COUNT" -le "$RESUME_FROM_ROW" ]; then
+                                echo "  [Resume] Skipping run $GLOBAL_RUN_COUNT (already in CSV)."
+                                continue
+                            fi
+
                             echo "------------------------------------------"
                             echo "    Run $i / $NUM_RUNS (Peds=$ped_count, Sweep=$sweep_val, Infl=$inflation)"
                             echo "------------------------------------------"
-                            
-                            # Generate reproducible Seed based on MASTER_SEED + run index $i
+
+                            # Seed = MASTER_SEED + combo_key + run_index.
+                            # This keeps seeds deterministic AND unique across all
+                            # (sweep, inflation, ped) combinations.
                             if [ -n "$MASTER_SEED" ] && [ "$MASTER_SEED" != "random" ]; then
-                                # We add 'i' to ensure each run within the 50 has a unique but reproducible seed
-                                SEED=$((MASTER_SEED + i))
+                                SEED=$(( (MASTER_SEED + COMBO_KEY + i) % 2147483647 ))
                             else
                                 SEED=$RANDOM$RANDOM
                             fi
@@ -176,6 +202,7 @@ for scenario in "${SCENARIOS[@]}"; do
                             START_WAIT=$(date +%s)
                             READY=false
                             
+                            SIM_TIMEOUT_HIT=false
                             while true; do
                                 if rostopic list > /dev/null 2>&1; then
                                     if rostopic list | grep -q "/move_base/status"; then
@@ -183,17 +210,22 @@ for scenario in "${SCENARIOS[@]}"; do
                                         break
                                     fi
                                 fi
-                                
+
                                 CURRENT_TIME=$(date +%s)
                                 ELAPSED=$((CURRENT_TIME - START_WAIT))
-                                
+
                                 if [ $ELAPSED -gt $TIMEOUT ]; then
-                                    echo "Timeout waiting for simulation!"
-                                    ./cleanup_processes.sh
-                                    exit 1
+                                    echo ">>> WARN: Timeout waiting for simulation on run $i. Skipping this run."
+                                    ./cleanup_processes.sh > /dev/null 2>&1
+                                    SIM_TIMEOUT_HIT=true
+                                    break
                                 fi
                                 sleep 2
                             done
+
+                            if [ "$SIM_TIMEOUT_HIT" = true ]; then
+                                continue
+                            fi
                             
                             echo "System Ready. Resetting AMCL..."
                             rostopic pub -1 /initialpose geometry_msgs/PoseWithCovarianceStamped "{header: {frame_id: 'map'}, pose: {pose: {position: {x: $START_X, y: $START_Y, z: 0.0}, orientation: {w: 1.0}}}}" > /dev/null 2>&1
@@ -202,13 +234,21 @@ for scenario in "${SCENARIOS[@]}"; do
                             # Run Benchmark
                             echo "[4/4] Executing Benchmark Test..."
                             PLANNER_TAG="${scenario}_${global}_${local}_sw${sweep_val}_inf${inflation}_ped${ped_count}_run${i}"
-                            roslaunch plannie benchmark.launch \
+
+                            # Shell-level timeout: MAX_TIMEOUT + 60s safety margin.
+                            # Guards against Gazebo/ROS freezes where internal callbacks never fire.
+                            SHELL_TIMEOUT=$(echo "$MAX_TIMEOUT + 60" | bc)
+                            timeout "$SHELL_TIMEOUT" roslaunch plannie benchmark.launch \
                                 planner:="$PLANNER_TAG" \
                                 goal_x:=$GOAL_X goal_y:=$GOAL_Y \
                                 summary_file:=$SUMMARY_FILE \
                                 target_startup_time:=$START_TIME \
                                 max_timeout:=$MAX_TIMEOUT
-                            
+                            EXIT_CODE=$?
+                            if [ $EXIT_CODE -eq 124 ]; then
+                                echo ">>> WARN: roslaunch killed by shell timeout after ${SHELL_TIMEOUT}s. Continuing to next run."
+                            fi
+
                             echo ">>> Finished: $PLANNER_TAG"
                             
                             # Cleanup

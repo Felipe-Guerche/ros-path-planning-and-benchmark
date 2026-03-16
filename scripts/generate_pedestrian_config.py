@@ -75,10 +75,20 @@ def sample_point(free_y, free_x, H, resolution, ox, oy, existing_points, min_dis
         if not too_close:
             return x, y
 
-    # Fallback: pick any point
+    # Fallback: pick any point and log the violation so it is visible in container logs
     idx = random.randint(0, len(free_y) - 1)
     r, c = free_y[idx], free_x[idx]
-    return px_to_real(r, c, H, resolution, ox, oy)
+    x, y = px_to_real(r, c, H, resolution, ox, oy)
+    min_achieved = min(
+        (math.hypot(x - ex, y - ey) for ex, ey in existing_points),
+        default=float('inf')
+    )
+    print(
+        f"[WARN] sample_point fallback: min_dist={min_dist}m not satisfied "
+        f"(closest existing point: {min_achieved:.2f}m). Pedestrians may overlap.",
+        file=sys.stderr
+    )
+    return x, y
 
 
 def generate_config(num_peds, map_yaml, robot_pos=None, seed=None, output_path=None):

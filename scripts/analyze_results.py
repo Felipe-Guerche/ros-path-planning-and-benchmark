@@ -5,7 +5,7 @@ Benchmark Results Analyzer
 - Computes success rates with Wilson confidence intervals.
 - Runs Shapiro-Wilk normality tests.
 - Runs Kruskal-Wallis + pairwise Mann-Whitney U tests.
-- Generates publication-ready plots (boxplots, violin, success bar charts).
+- Generates publication-ready plots with Strict Variable Isolation.
 """
 
 import os
@@ -20,8 +20,9 @@ from scipy import stats
 
 
 def find_and_merge_csvs(results_dir):
-    """Find all battery_summary_*.csv files and merge into one DataFrame."""
-    pattern = os.path.join(results_dir, "battery_summary_*.csv")
+    """Find all summary CSV files, merge, and create rigorous statistical groups."""
+    # Updated pattern to catch both legacy and new Pause & Resume deterministic names
+    pattern = os.path.join(results_dir, "*summary_*.csv")
     files = sorted(glob.glob(pattern))
     if not files:
         print(f"No summary files found in: {results_dir}")
@@ -31,9 +32,43 @@ def find_and_merge_csvs(results_dir):
     for f in files:
         print(f"  - {os.path.basename(f)}")
 
-    dfs = [pd.read_csv(f) for f in files]
+    dfs = []
+    for f in files:
+        try:
+            df = pd.read_csv(f)
+            if df.empty:
+                print(f"  [WARN] Skipping empty file: {os.path.basename(f)}")
+                continue
+            dfs.append(df)
+        except Exception as e:
+            print(f"  [WARN] Could not read {os.path.basename(f)}: {e}. Skipping.")
+
+    if not dfs:
+        print("No readable summary files found. Aborting.")
+        sys.exit(1)
+
     merged = pd.concat(dfs, ignore_index=True)
+
+    # ---------------------------------------------------------
+    # Strict Variable Isolation
+    # Avoid mixing different scenarios/sweeps in the same distribution
+    # ---------------------------------------------------------
+    cols_to_group = []
+    potential_vars = ["Scenario", "GlobalPlanner", "LocalPlanner", "Pedestrians", "Inflation", "Sweep"]
+
+    for col in potential_vars:
+        if col in merged.columns:
+            cols_to_group.append(col)
+
+    if cols_to_group:
+        merged["Config_Tag"] = merged[cols_to_group].astype(str).agg('-'.join, axis=1)
+    elif "GlobalPlanner" in merged.columns:
+        merged["Config_Tag"] = merged["GlobalPlanner"]
+    else:
+        merged["Config_Tag"] = "UnknownGroup"
+
     print(f"\nTotal rows after merge: {len(merged)}")
+    print(f"Identified {merged['Config_Tag'].nunique()} unique experimental conditions.")
     return merged
 
 
@@ -48,7 +83,7 @@ def wilson_ci(n_success, n_total, z=1.96):
     return p_hat, max(0, center - spread), min(1, center + spread)
 
 
-def compute_success_rates(df, group_col="GlobalPlanner"):
+def compute_success_rates(df, group_col="Config_Tag"):
     """Compute success rates per group with Wilson CI."""
     print(f"\n{'='*60}")
     print(f"  SUCCESS RATES (grouped by {group_col})")
@@ -66,7 +101,7 @@ def compute_success_rates(df, group_col="GlobalPlanner"):
             'Rate': f"{rate:.1%}",
             '95% CI': f"[{ci_low:.1%}, {ci_high:.1%}]"
         })
-        print(f"  {name:25s} | {n_success}/{n_total} = {rate:.1%}  CI: [{ci_low:.1%}, {ci_high:.1%}]")
+        print(f"  {name:40s} | {n_success:3d}/{n_total:<3d} = {rate:>6.1%}  CI: [{ci_low:.1%}, {ci_high:.1%}]")
 
     return pd.DataFrame(results)
 
@@ -79,9 +114,9 @@ def run_normality_tests(groups, metric_name):
         if len(values) >= 3:
             stat, p = stats.shapiro(values)
             tag = "Normal" if p > 0.05 else "NOT Normal"
-            print(f"  {name:25s} | W={stat:.4f}  p={p:.6f}  => {tag}")
+            print(f"  {name:40s} | W={stat:.4f}  p={p:.6f}  => {tag}")
         else:
-            print(f"  {name:25s} | Too few samples ({len(values)})")
+            print(f"  {name:40s} | Too few samples ({len(values)})")
 
 
 def run_kruskal_wallis(groups, metric_name):
@@ -104,7 +139,7 @@ def run_kruskal_wallis(groups, metric_name):
                     groups[names[i]], groups[names[j]], alternative="two-sided"
                 )
                 tag = "DIFFERENT" if u_p < 0.05 else "similar"
-                print(f"  {names[i]:20s} vs {names[j]:20s} | U={u_stat:.1f}  p={u_p:.6f}  => {tag}")
+                print(f"  {names[i][:20]:20s} vs {names[j][:20]:20s} | U={u_stat:>6.1f}  p={u_p:.6f}  => {tag}")
     else:
         print("  => No statistically significant difference between groups.")
 
@@ -121,7 +156,7 @@ def bootstrap_ci(data, n_bootstrap=10000, ci=0.95):
     return np.mean(data), np.percentile(boot_means, alpha * 100), np.percentile(boot_means, (1 - alpha) * 100)
 
 
-def analyze(df, group_col="GlobalPlanner", metrics=None):
+def analyze(df, group_col="Config_Tag", metrics=None):
     """Run full statistical analysis on the DataFrame."""
     if metrics is None:
         metrics = ["Time(s)", "Distance(m)", "Smoothness(rad)", "CPU(%)", "Memory(MiB)"]
@@ -160,7 +195,7 @@ def analyze(df, group_col="GlobalPlanner", metrics=None):
             vals = group[metric].dropna().values
             if len(vals) >= 2:
                 mean, ci_low, ci_high = bootstrap_ci(vals)
-                print(f"  {name:25s} | Mean={mean:.4f}  95% CI: [{ci_low:.4f}, {ci_high:.4f}]")
+                print(f"  {name:40s} | Mean={mean:.4f}  95% CI: [{ci_low:.4f}, {ci_high:.4f}]")
 
         # Build groups for statistical tests
         groups = {}
@@ -177,34 +212,33 @@ def analyze(df, group_col="GlobalPlanner", metrics=None):
         run_kruskal_wallis(groups, metric)
 
 
-def generate_plots(df, group_col="GlobalPlanner", output_dir="results/figures"):
+def generate_plots(df, group_col="Config_Tag", output_dir="results/figures"):
     """Generate publication-ready plots."""
     try:
         import matplotlib
-        matplotlib.use('Agg')  # Non-interactive backend
+        matplotlib.use('Agg')
         import matplotlib.pyplot as plt
     except ImportError:
         print("Warning: matplotlib not available. Skipping plots.", file=sys.stderr)
         return
 
     os.makedirs(output_dir, exist_ok=True)
-
-    if "Status" in df.columns:
-        successful = df[df["Status"].str.upper() == "SUCCESS"]
-    else:
-        successful = df
-
+    successful = df[df["Status"].str.upper() == "SUCCESS"] if "Status" in df.columns else df
     metrics = ["Time(s)", "Distance(m)", "Smoothness(rad)", "CPU(%)"]
+
+    # Truncate labels for better plotting if they are too long
+    def truncate_label(label):
+        return label if len(label) <= 15 else label[:12] + "..."
 
     # Boxplots per metric
     for metric in metrics:
         if metric not in successful.columns:
             continue
 
-        fig, ax = plt.subplots(figsize=(12, 6))
+        fig, ax = plt.subplots(figsize=(14, 7))
         groups = successful.groupby(group_col)[metric]
         data = [group.dropna().values for _, group in groups]
-        labels = [name for name, _ in groups]
+        labels = [truncate_label(name) for name, _ in groups]
 
         bp = ax.boxplot(data, labels=labels, patch_artist=True)
         colors = plt.cm.Set2(np.linspace(0, 1, len(data)))
@@ -220,32 +254,11 @@ def generate_plots(df, group_col="GlobalPlanner", output_dir="results/figures"):
         fname = f"boxplot_{metric.replace('(', '').replace(')', '').replace('%', 'pct')}.png"
         plt.savefig(os.path.join(output_dir, fname), dpi=300, bbox_inches='tight')
         plt.close()
-        print(f"  Saved: {fname}")
-
-    # Violin plot for Time
-    if "Time(s)" in successful.columns:
-        fig, ax = plt.subplots(figsize=(12, 6))
-        groups = successful.groupby(group_col)["Time(s)"]
-        data = [group.dropna().values for _, group in groups]
-        labels = [name for name, _ in groups]
-
-        vp = ax.violinplot(data, showmeans=True, showmedians=True)
-        ax.set_xticks(range(1, len(labels) + 1))
-        ax.set_xticklabels(labels, rotation=45)
-        ax.set_title('Time Distribution by Planner', fontsize=14, fontweight='bold')
-        ax.set_ylabel('Time (s)')
-        plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, "violin_time.png"), dpi=300, bbox_inches='tight')
-        plt.close()
-        print(f"  Saved: violin_time.png")
 
     # Success rate bar chart
     if "Status" in df.columns:
-        fig, ax = plt.subplots(figsize=(12, 6))
-        rates = []
-        ci_lows = []
-        ci_highs = []
-        labels = []
+        fig, ax = plt.subplots(figsize=(14, 7))
+        rates, ci_lows, ci_highs, labels = [], [], [], []
         for name, group in df.groupby(group_col):
             n_total = len(group)
             n_success = len(group[group['Status'].str.upper() == 'SUCCESS'])
@@ -253,7 +266,7 @@ def generate_plots(df, group_col="GlobalPlanner", output_dir="results/figures"):
             rates.append(rate * 100)
             ci_lows.append((rate - ci_low) * 100)
             ci_highs.append((ci_high - rate) * 100)
-            labels.append(name)
+            labels.append(truncate_label(name))
 
         x = range(len(labels))
         colors = plt.cm.Set2(np.linspace(0, 1, len(labels)))
@@ -262,12 +275,11 @@ def generate_plots(df, group_col="GlobalPlanner", output_dir="results/figures"):
         ax.set_xticks(x)
         ax.set_xticklabels(labels, rotation=45)
         ax.set_ylabel('Success Rate (%)')
-        ax.set_title('Success Rate by Planner (95% Wilson CI)', fontsize=14, fontweight='bold')
+        ax.set_title('Success Rate by Configuration (95% Wilson CI)', fontsize=14, fontweight='bold')
         ax.set_ylim(0, 105)
         plt.tight_layout()
         plt.savefig(os.path.join(output_dir, "success_rate.png"), dpi=300, bbox_inches='tight')
         plt.close()
-        print(f"  Saved: success_rate.png")
 
     print(f"\nAll plots saved to: {output_dir}")
 
@@ -275,34 +287,38 @@ def generate_plots(df, group_col="GlobalPlanner", output_dir="results/figures"):
 def main():
     parser = argparse.ArgumentParser(description="Analyze Benchmark Results")
     parser.add_argument("--results_dir", type=str, default=None,
-                        help="Directory containing battery_summary_*.csv files")
+                        help="Directory containing summary_*.csv files")
     parser.add_argument("--summary_file", type=str, default=None,
                         help="Path to a single summary CSV (overrides --results_dir)")
-    parser.add_argument("--group_by", type=str, default="GlobalPlanner",
-                        help="Column to group by for comparison (default: GlobalPlanner)")
+    parser.add_argument("--group_by", type=str, default="Config_Tag",
+                        help="Column to group by (default: Config_Tag, dynamically generated)")
     parser.add_argument("--plot", action="store_true",
                         help="Generate publication-ready plots")
     parser.add_argument("--plot_dir", type=str, default="results/figures",
-                        help="Output directory for plots (default: results/figures)")
+                        help="Output directory for plots")
     args = parser.parse_args()
 
+    # Load Data
     if args.summary_file:
         print(f"Analyzing single file: {args.summary_file}")
         df = pd.read_csv(args.summary_file)
+        if "Config_Tag" not in df.columns and args.group_by == "Config_Tag":
+            df["Config_Tag"] = df["GlobalPlanner"] if "GlobalPlanner" in df.columns else "Unknown"
     else:
         results_dir = args.results_dir or os.path.join(
             os.path.dirname(__file__), "..", "src", "plannie-main", "results"
         )
         df = find_and_merge_csvs(results_dir)
 
-    # Save merged CSV
+    # Save merged output
     if args.results_dir:
         merged_path = os.path.join(args.results_dir, "merged_results.csv")
         df.to_csv(merged_path, index=False)
-        print(f"\nMerged CSV saved to: {merged_path}")
 
+    # Run Analysis
     analyze(df, group_col=args.group_by)
 
+    # Run Plots
     if args.plot:
         print("\n--- Generating Plots ---")
         generate_plots(df, group_col=args.group_by, output_dir=args.plot_dir)
