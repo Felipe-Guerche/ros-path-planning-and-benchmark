@@ -24,6 +24,7 @@ RUN apt-get update --fix-missing\
     ros-noetic-move-base \
     ros-noetic-navfn \
     xvfb \
+    bc \
     && rm -rf /var/lib/apt/lists/*
 
 # python packages (benchmark dependencies)
