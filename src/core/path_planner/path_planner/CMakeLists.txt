@@ -16,6 +16,10 @@ find_package(catkin REQUIRED COMPONENTS
   common
   system_config
 )
+ 
+get_filename_component(PROJECT_ROOT_DIR ${CMAKE_SOURCE_DIR} DIRECTORY)
+include(${PROJECT_ROOT_DIR}/3rd/conanbuildinfo.cmake)
+conan_basic_setup()
 
 catkin_package(
  INCLUDE_DIRS include
@@ -47,4 +51,5 @@ add_library(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
+  ${CONAN_LIBS}
 )

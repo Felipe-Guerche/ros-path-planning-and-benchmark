@@ -37,6 +37,9 @@ costmap_2d::Costmap2DROS* CollisionChecker::getCostmapROS() const
 bool CollisionChecker::inCollision(const unsigned int& x, const unsigned int& y, const bool& traverse_unknown)
 {
   const unsigned int width = costmap_ros_->getCostmap()->getSizeInCellsX();
+  const unsigned int height = costmap_ros_->getCostmap()->getSizeInCellsY();
+  if (x >= width || y >= height)
+    return true;
   const unsigned int index = x + width * y;
   return inCollision(index, traverse_unknown);
 }
@@ -85,7 +88,7 @@ bool CollisionChecker::isInsideMap(const unsigned int& i)
 {
   unsigned int size = static_cast<unsigned int>(costmap_ros_->getCostmap()->getSizeInCellsX() *
                                                 costmap_ros_->getCostmap()->getSizeInCellsY());
-  return ((i > 0) && (i < size));
+  return (i < size);
 }
 
 }  // namespace geometry

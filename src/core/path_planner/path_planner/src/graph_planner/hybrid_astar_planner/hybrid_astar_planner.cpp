@@ -54,9 +54,14 @@ HybridAStarPathPlanner::HybridAStarPathPlanner(costmap_2d::Costmap2DROS* costmap
                              hybrid_astar_config_.non_straight_penalty(),
                              hybrid_astar_config_.reverse_penalty(),
                              hybrid_astar_config_.retrospective_penalty());
-  } else {
-    R_ERROR << "Invalid motion model for HybridAStarPathPlanner";
   }
+}
+ 
+/**
+ * @brief Destroy the Hybrid A* object
+ */
+HybridAStarPathPlanner::~HybridAStarPathPlanner() {
+  clearGraph();
 }
 
 /**

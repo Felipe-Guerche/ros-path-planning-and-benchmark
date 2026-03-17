@@ -7,6 +7,10 @@ find_package(Protobuf 3 REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
   common
 )
+ 
+get_filename_component(PROJECT_ROOT_DIR ${CMAKE_SOURCE_DIR} DIRECTORY)
+include(${PROJECT_ROOT_DIR}/3rd/conanbuildinfo.cmake)
+conan_basic_setup()
 
 catkin_package(
   INCLUDE_DIRS include
@@ -75,6 +79,7 @@ include_directories(
 target_link_libraries(${PROJECT_NAME}
   ${PROTOBUF_LIBRARIES}
   ${catkin_LIBRARIES}
+  ${CONAN_LIBS}
 )
 target_include_directories(${PROJECT_NAME} PUBLIC
   ${CMAKE_CURRENT_BINARY_DIR}
