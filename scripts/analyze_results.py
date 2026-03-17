@@ -54,7 +54,7 @@ def find_and_merge_csvs(results_dir):
     # Avoid mixing different scenarios/sweeps in the same distribution
     # ---------------------------------------------------------
     cols_to_group = []
-    potential_vars = ["Scenario", "GlobalPlanner", "LocalPlanner", "Pedestrians", "Inflation", "Sweep"]
+    potential_vars = ["Scenario", "GlobalPlanner", "LocalPlanner", "PedCount", "InflationFactor", "SweepParam"]
 
     for col in potential_vars:
         if col in merged.columns:
@@ -224,7 +224,7 @@ def generate_plots(df, group_col="Config_Tag", output_dir="results/figures"):
 
     os.makedirs(output_dir, exist_ok=True)
     successful = df[df["Status"].str.upper() == "SUCCESS"] if "Status" in df.columns else df
-    metrics = ["Time(s)", "Distance(m)", "Smoothness(rad)", "CPU(%)"]
+    metrics = ["Time(s)", "Distance(m)", "Smoothness(rad)", "CPU(%)", "Memory(MiB)"]
 
     # Truncate labels for better plotting if they are too long
     def truncate_label(label):

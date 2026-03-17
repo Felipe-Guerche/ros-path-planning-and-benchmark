@@ -21,6 +21,7 @@ class BenchmarkManager:
         self.goal_x = rospy.get_param('~goal_x', 2.0)
         self.goal_y = rospy.get_param('~goal_y', 2.0)
         self.max_timeout = rospy.get_param('~max_timeout', 180.0)
+        self.seed = rospy.get_param('~seed', 0)
         
         # State
         self.start_time = None
@@ -268,7 +269,7 @@ class BenchmarkManager:
         try:
             with open(filepath, 'a') as f:
                 if not file_exists:
-                    f.write("Scenario,GlobalPlanner,LocalPlanner,SweepParam,InflationFactor,PedCount,Status,Time(s),Distance(m),Smoothness(rad),CPU(%),Memory(%),Memory(MiB),TotalRAM(GiB)\n")
+                    f.write("Scenario,GlobalPlanner,LocalPlanner,SweepParam,InflationFactor,PedCount,Seed,Status,Time(s),Distance(m),Smoothness(rad),CPU(%),Memory(%),Memory(MiB),TotalRAM(GiB)\n")
                 
                 status_str = "SUCCESS" if success else "FAILURE"
                 total_ram_gb = psutil.virtual_memory().total / (1024**3)
@@ -299,7 +300,7 @@ class BenchmarkManager:
                 local_p = remaining[-1] if remaining else "unknown"
                 global_p = "_".join(remaining[:-1]) if len(remaining) > 1 else (remaining[0] if remaining else "unknown")
                 
-                f.write(f"{scenario},{global_p},{local_p},{sweep_val},{inflation},{ped_count},{status_str},{time_taken:.4f},{total_dist:.4f},{smoothness:.4f},{avg_cpu:.2f},{max_mem:.2f},{max_mem_mb:.2f},{total_ram_gb:.2f}\n")
+                f.write(f"{scenario},{global_p},{local_p},{sweep_val},{inflation},{ped_count},{self.seed},{status_str},{time_taken:.4f},{total_dist:.4f},{smoothness:.4f},{avg_cpu:.2f},{max_mem:.2f},{max_mem_mb:.2f},{total_ram_gb:.2f}\n")
                     
                 rospy.loginfo(f"Added to summary: {filepath}")
         except Exception as e:

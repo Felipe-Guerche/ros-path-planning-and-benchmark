@@ -7,6 +7,7 @@
     <arg name="summary_file" default="" />
     <arg name="target_startup_time" default="0.0" />
     <arg name="max_timeout" default="180.0" />
+    <arg name="seed" default="0" />
 
     <!-- Benchmark Manager Node -->
     <!-- Start Simulation (Using existing launch from internal packages via launch_simulator.sh logic but directly) -->
@@ -26,5 +27,6 @@
         <param name="summary_file" value="$(arg summary_file)" />
         <param name="target_startup_time" value="$(arg target_startup_time)" />
         <param name="max_timeout" value="$(arg max_timeout)" />
+        <param name="seed" value="$(arg seed)" />
     </node>
 </launch>

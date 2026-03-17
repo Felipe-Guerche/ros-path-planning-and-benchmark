@@ -243,7 +243,8 @@ for scenario in "${SCENARIOS[@]}"; do
                                 goal_x:=$GOAL_X goal_y:=$GOAL_Y \
                                 summary_file:=$SUMMARY_FILE \
                                 target_startup_time:=$START_TIME \
-                                max_timeout:=$MAX_TIMEOUT
+                                max_timeout:=$MAX_TIMEOUT \
+                                seed:=$SEED
                             EXIT_CODE=$?
                             if [ $EXIT_CODE -eq 124 ]; then
                                 echo ">>> WARN: roslaunch killed by shell timeout after ${SHELL_TIMEOUT}s. Continuing to next run."

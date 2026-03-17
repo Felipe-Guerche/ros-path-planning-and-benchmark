@@ -31,6 +31,10 @@ BASE_GAZEBO_PORT=11345
 
 # --- Randomization & Reproducibility ---
 MASTER_SEED="random"
+if [ -f "./seed.md" ]; then
+    MASTER_SEED=$(head -n 1 ./seed.md | tr -d '\r\n ')
+    echo "[Config] Found seed.md, using MASTER_SEED=$MASTER_SEED"
+fi
 FORCE_NEW_SEED=false
 FORCE_RESUME_SEED=false
 
@@ -83,25 +87,17 @@ if [ "$FORCE_NEW_SEED" = true ]; then
     MASTER_SEED="random"
 fi
 
-if [ "$MASTER_SEED" == "random" ] && [ "$FORCE_RESUME_SEED" = false ]; then
-    if [ -f "$SEED_FILE" ]; then
-        MASTER_SEED=$(cat "$SEED_FILE")
-        echo "[State] Resuming with persisted random seed: $MASTER_SEED"
-    else
-        MASTER_SEED=$RANDOM
-        echo "$MASTER_SEED" > "$SEED_FILE"
-        echo "[State] Generated and persisted new random seed: $MASTER_SEED"
-    fi
+if [ "$MASTER_SEED" != "random" ]; then
+    # seed.md or explicit override takes priority
+    echo "$MASTER_SEED" > "$SEED_FILE"
+    echo "[State] Using seed from seed.md/config: $MASTER_SEED"
+elif [ -f "$SEED_FILE" ] && [ "$FORCE_RESUME_SEED" = true ]; then
+    MASTER_SEED=$(cat "$SEED_FILE")
+    echo "[State] Resuming with persisted random seed: $MASTER_SEED"
 else
-    # Either forced resume or explicit seed
-    if [ -f "$SEED_FILE" ]; then
-        MASTER_SEED=$(cat "$SEED_FILE")
-        echo "[State] Resuming with persisted random seed: $MASTER_SEED"
-    else
-        # This case only hit if MASTER_SEED was hardcoded to something other than "random"
-        echo "$MASTER_SEED" > "$SEED_FILE"
-        echo "[State] Using explicit fixed seed: $MASTER_SEED"
-    fi
+    MASTER_SEED=$RANDOM
+    echo "$MASTER_SEED" > "$SEED_FILE"
+    echo "[State] Generated and persisted new random seed: $MASTER_SEED"
 fi
 
 echo "============================================="
@@ -240,3 +236,8 @@ for pid in "${RUNNING_PIDS[@]}"; do
     wait "$pid" 2>/dev/null || true
 done
 echo "Benchmark completed."
+
+# --- Step 4: Final Analysis ---
+echo "[4/4] Generating final analysis and plots..."
+python3 scripts/analyze_results.py --results_dir "$RESULTS_DIR" --plot --plot_dir "$RESULTS_DIR/figures"
+echo "      Analysis complete. Check $RESULTS_DIR/figures for results."
