@@ -14,7 +14,8 @@ A* combined with the Artificial Potential Field (APF) local planner demonstrated
 ![Success Rate](assets/benchmark/success_rate.png)
 
 *   **Grid-based Planners (A*, Dijkstra):** Showed superior reliability in nominal conditions, effectively navigating traditional static and moderately dynamic scenarios.
-*   **Stochastic & Kinematic Approaches:** RRT variants (**~53-57%**) and Hybrid A* (**~46-52%**) showed lower overall success in these specific dynamic tests, likely due to increased trajectory complexity and computational timeouts.
+*   **Kinematic Planners (Hybrid A*):** Provided smooth, feasible paths (**~46-52%** success) but faced challenges in high-frequency dynamic obstacle avoidance. The low success rate is primarily due to the **Reed-Shepp/Dubins heuristics**, which often lead the kinematic expansion too close to dynamic obstacles, causing excessive computational overhead and timeouts before a solution is reached.
+*   **Lazy Theta* (0% Success):** The benchmark recorded a zero success rate for this algorithm. This is empirically attributed to a **failure in the Line-of-Sight (LOS) implementation** or memory overflows within this specific repository's plugin when handling high-frequency costmap updates, rather than a conceptual limitation of the Theta architecture itself.
 *   **Local Planner Impact:** Across almost all global planners, **APF** consistently yielded higher success rates than **DWA** in this benchmark's density settings.
 
 ### 2. Temporal Efficiency & Smoothness
