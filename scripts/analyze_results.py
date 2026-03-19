@@ -323,8 +323,8 @@ def main():
                         help="Column to group by (default: Config_Tag, dynamically generated)")
     parser.add_argument("--plot", action="store_true",
                         help="Generate publication-ready plots")
-    parser.add_argument("--plot_dir", type=str, default="results/figures",
-                        help="Output directory for plots")
+    parser.add_argument("--plot_dir", type=str, default=None,
+                        help="Output directory for plots (default: <results_dir>/figures)")
     args = parser.parse_args()
 
     # Load Data
@@ -353,7 +353,8 @@ def main():
     # Run Plots
     if args.plot:
         print("\n--- Generating Plots ---")
-        generate_plots(df, group_col=args.group_by, output_dir=args.plot_dir)
+        plot_dir = args.plot_dir or os.path.join(results_dir, "figures")
+        generate_plots(df, group_col=args.group_by, output_dir=plot_dir)
 
 
 if __name__ == "__main__":
