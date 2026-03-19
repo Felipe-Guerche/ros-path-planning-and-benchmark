@@ -9,27 +9,30 @@ It bridges the gap between algorithmic implementation and performance verificati
 The following results were obtained using the **Robust Research** pipeline with `MASTER_SEED=15257`. The analysis focuses on the **Nominal Case** (Inflation=0.5, PedCount=5) to ensure a balanced comparison across all planner architectures.
 
 ### 1. Overall Success Rate
-A* combined with the Artificial Potential Field (APF) local planner demonstrated the highest overall success rate (74.3%), followed closely by Dijkstra-APF (70.1%).
+A* combined with the Artificial Potential Field (APF) local planner demonstrated the highest overall success rate (**72.9%**), followed by Dijkstra-APF (**70.1%**).
 
 ![Success Rate](assets/benchmark/success_rate.png)
 
 *   **Grid-based Planners (A*, Dijkstra):** Showed superior reliability in nominal conditions, effectively navigating traditional static and moderately dynamic scenarios.
-*   **Sampling-based Planners (RRT):** Exhibited lower success rates (~57%) but maintained a more consistent performance in extremely dense maps where grid search complexity peaks.
-*   **Kinematic Planners (Hybrid A*):** Provided smooth, feasible paths (46-52% success) but faced challenges in high-frequency dynamic obstacle avoidance due to higher computational overhead.
+*   **Stochastic & Kinematic Approaches:** RRT variants (**~53-57%**) and Hybrid A* (**~46-52%**) showed lower overall success in these specific dynamic tests, likely due to increased trajectory complexity and computational timeouts.
+*   **Local Planner Impact:** Across almost all global planners, **APF** consistently yielded higher success rates than **DWA** in this benchmark's density settings.
 
-### 2. Temporal Efficiency
-Computation time varies significantly between deterministic and stochastic approaches.
+### 2. Temporal Efficiency & Smoothness
+Computation time and path quality exhibit clear trade-offs between deterministic and sampling-based methods.
 
 ![Computation Time](assets/benchmark/Times.png)
+![Smoothness](assets/benchmark/Smoothnessrad.png)
 
-*   **Observation:** While A* and Dijkstra are faster to reach a solution, RRT variants show a wider spread in computation time, reflecting their stochastic nature.
-*   **Trade-off:** Planners that prioritize path smoothness (like Hybrid A*) generally require more computation time per cycle compared to raw grid search.
+*   **Speed Leader:** **D*-Lite (APF)** achieved the fastest mean computation time (**39.9s**) among successful runs, although at the cost of a lower success rate (56.1%) compared to A*.
+*   **Smoothness Trade-off:** RRT-based planners, while computationally intensive, often produce higher variance in path smoothness (rad), whereas grid-planners maintain tighter, more predictable trajectory profiles.
 
-### 3. Metric Distribution (Memory & Distance)
-| Metric | Leader | Observation |
+### 3. Resource Usage (Memory & Distance)
+![Memory Usage](assets/benchmark/MemoryMiB.png)
+
+| Metric | Leader | Empirical Observation |
 | :--- | :--- | :--- |
-| **Memory** | A*-DWA | Deterministic planners maintain a lower and more predictable memory footprint. |
-| **Distance** | Dijkstra | Grid-based optimal search consistently produces shorter paths compared to RRT-based exploration. |
+| **Memory** | RRT-APF | Showed the lowest mean memory footprint (**40.8 MiB**), whereas D*-Lite exhibited the highest (**62.4 MiB**) due to its complex node management. |
+| **Distance** | A*-DWA | Grid-based optimal search consistently produces 5-10% shorter paths compared to sampling-based exploration. |
 
 ---
 *For the complete statistical analysis, including parameter sensitivity (facet grids) and failure case logs, refer to the [results session folder](results/seed_15257/).*
