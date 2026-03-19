@@ -18,6 +18,31 @@ import pandas as pd
 import numpy as np
 from scipy import stats
 
+try:
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+    from matplotlib.backends.backend_pdf import PdfPages
+except ImportError:
+    sns = None
+    plt = None
+
+# Publication-Standard Palette Mapping
+PALETTE_MAP = {
+    "astar": "#1f77b4",          # Blue
+    "hybrid_astar": "#ff7f0e",   # Orange
+    "dijkstra": "#2ca02c",       # Green
+    "lazy_theta_star": "#d62728",# Red
+    "dstar_lite": "#9467bd",     # Purple
+    "rrt": "#8c564b",            # Brown
+    "unknown": "#7f7f7f"         # Gray
+}
+
+# Nominal Scenario for Tier 1 "Article" Plots
+NOMINAL_CONFIG = {
+    "InflationFactor": 0.5,
+    "PedCount": 5
+}
+
 
 def find_and_merge_csvs(results_dir):
     """Find all summary CSV files, merge, and create rigorous statistical groups."""
@@ -241,74 +266,173 @@ def report_failures(df, output_dir):
     print(f"Failure report generated successfully.")
 
 
+def get_algo_color(planner_name):
+    """Map planner names to consistent palette colors."""
+    p_lower = str(planner_name).lower()
+    for key, color in PALETTE_MAP.items():
+        if key in p_lower:
+            return color
+    return PALETTE_MAP["unknown"]
+
+
 def generate_plots(df, group_col="Config_Tag", output_dir="results/figures"):
-    """Generate publication-ready plots."""
-    try:
-        import matplotlib
-        matplotlib.use('Agg')
-        import matplotlib.pyplot as plt
-    except ImportError:
-        print("Warning: matplotlib not available. Skipping plots.", file=sys.stderr)
+    """Generate publication-ready, two-tier plots using Seaborn."""
+    if not sns or not plt:
+        print("Warning: seaborn/matplotlib not available. Skipping plots.", file=sys.stderr)
         return
 
     os.makedirs(output_dir, exist_ok=True)
-    successful = df[df["Status"].str.upper() == "SUCCESS"] if "Status" in df.columns else df
+    sns.set_theme(style="white")
+    
+    # Pre-process Data: Add combined Algo tag and handle Smoothness outliers
+    df["Algorithm"] = df["GlobalPlanner"] + "-" + df["LocalPlanner"]
+    
+    # Tier 1 & 2 Metrics
     metrics = ["Time(s)", "Distance(m)", "Smoothness(rad)", "CPU(%)", "Memory(MiB)"]
+    
+    # Build dynamic palette from Algorithm column
+    active_algos = df["Algorithm"].unique()
+    algo_palette = {algo: get_algo_color(algo) for algo in active_algos}
+    
+    # ---------------------------------------------------------
+    # TIER 1: Article-Ready Overview (Nominal Case)
+    # ---------------------------------------------------------
+    print("\n[Vizu] Generating Tier 1: Article-Ready Overview (Nominal Case)...")
+    tier1_dir = os.path.join(output_dir, "tier1_article")
+    os.makedirs(tier1_dir, exist_ok=True)
 
-    # Truncate labels for better plotting if they are too long
-    def truncate_label(label):
-        return label if len(label) <= 15 else label[:12] + "..."
+    # Filtering for nominal case (e.g., Inflation=0.5, PedCount=5 or closest)
+    # Handle both Static (PedCount=0 typically) and Dynamic
+    nominal_df = df[
+        ((df["Scenario"] == "static") & (df["InflationFactor"] == 0.5)) |
+        ((df["Scenario"] == "dynamic") & (df["InflationFactor"] == 0.5) & (df["PedCount"] == 5))
+    ]
+    
+    if nominal_df.empty:
+        print("  [WARN] No exact nominal matches found. Relaxing filter to Inflation=0.5.")
+        nominal_df = df[df["InflationFactor"] == 0.5] if "InflationFactor" in df.columns else df
 
-    # Boxplots per metric
+    succ_nom = nominal_df[nominal_df["Status"].str.upper() == "SUCCESS"]
+    
     for metric in metrics:
-        if metric not in successful.columns:
+        if metric not in succ_nom.columns:
             continue
-
-        fig, ax = plt.subplots(figsize=(14, 7))
-        groups = successful.groupby(group_col)[metric]
-        data = [group.dropna().values for _, group in groups]
-        labels = [truncate_label(name) for name, _ in groups]
-
-        bp = ax.boxplot(data, labels=labels, patch_artist=True)
-        colors = plt.cm.Set2(np.linspace(0, 1, len(data)))
-        for patch, color in zip(bp['boxes'], colors):
-            patch.set_facecolor(color)
-            patch.set_alpha(0.7)
-
-        ax.set_title(f'{metric} by {group_col}', fontsize=14, fontweight='bold')
+            
+        fig, ax = plt.subplots(figsize=(10, 6))
+        
+        # Determine scale limits for Smoothness to avoid compression by RRT outliers
+        y_limit = None
+        if metric == "Smoothness(rad)":
+            q3 = succ_nom[metric].quantile(0.75)
+            iqr = q3 - succ_nom[metric].quantile(0.25)
+            y_limit = q3 + 5.0 * iqr # Cap at 5*IQR for visibility
+            
+        # Draw Boxplot
+        sns.boxplot(data=succ_nom, x="Algorithm", y=metric, hue="Algorithm", 
+                    palette=algo_palette, ax=ax, showmeans=True,
+                    meanprops={"marker":"*", "markerfacecolor":"white", "markeredgecolor":"black"},
+                    dodge=False)
+        
+        if y_limit:
+            ax.set_ylim(0, y_limit)
+            ax.set_title(f"{metric} (Outliers Capped for Visibility)", fontweight='bold')
+        else:
+            ax.set_title(f"{metric} - Nominal Case Analysis", fontweight='bold')
+            
+        ax.set_xlabel("Planner Combination")
         ax.set_ylabel(metric)
-        ax.tick_params(axis='x', rotation=45)
+        plt.xticks(rotation=45)
         plt.tight_layout()
-
-        fname = f"boxplot_{metric.replace('(', '').replace(')', '').replace('%', 'pct')}.png"
-        plt.savefig(os.path.join(output_dir, fname), dpi=300, bbox_inches='tight')
+        
+        # Save as PDF (Vector) and PNG (Review)
+        metric_safe = metric.replace('(', '').replace(')', '').replace('%', 'pct')
+        fig.savefig(os.path.join(tier1_dir, f"{metric_safe}.pdf"), format='pdf')
+        fig.savefig(os.path.join(tier1_dir, f"{metric_safe}.png"), dpi=300)
         plt.close()
 
-    # Success rate bar chart
-    if "Status" in df.columns:
-        fig, ax = plt.subplots(figsize=(14, 7))
-        rates, ci_lows, ci_highs, labels = [], [], [], []
-        for name, group in df.groupby(group_col):
-            n_total = len(group)
-            n_success = len(group[group['Status'].str.upper() == 'SUCCESS'])
-            rate, ci_low, ci_high = wilson_ci(n_success, n_total)
-            rates.append(rate * 100)
-            ci_lows.append((rate - ci_low) * 100)
-            ci_highs.append((ci_high - rate) * 100)
-            labels.append(truncate_label(name))
+    # ---------------------------------------------------------
+    # TIER 2: Parameter Sensitivity (Appendix Facets)
+    # ---------------------------------------------------------
+    print("[Vizu] Generating Tier 2: Parameter Sensitivity (Appendix Facets)...")
+    tier2_dir = os.path.join(output_dir, "tier2_sensitivity")
+    os.makedirs(tier2_dir, exist_ok=True)
+    
+    succ_df = df[df["Status"].str.upper() == "SUCCESS"]
+    
+    for metric in metrics:
+        if metric not in succ_df.columns:
+            continue
+            
+        metric_safe = metric.replace('(', '').replace(')', '').replace('%', 'pct')
 
-        x = range(len(labels))
-        colors = plt.cm.Set2(np.linspace(0, 1, len(labels)))
-        bars = ax.bar(x, rates, yerr=[ci_lows, ci_highs], capsize=5,
-                      color=colors, edgecolor='black', alpha=0.8)
-        ax.set_xticks(x)
-        ax.set_xticklabels(labels, rotation=45)
-        ax.set_ylabel('Success Rate (%)')
-        ax.set_title('Success Rate by Configuration (95% Wilson CI)', fontsize=14, fontweight='bold')
-        ax.set_ylim(0, 105)
-        plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, "success_rate.png"), dpi=300, bbox_inches='tight')
-        plt.close()
+        # 2a. Static Sensitivity (Only Inflation varies)
+        static_succ = succ_df[succ_df["Scenario"] == "static"]
+        if not static_succ.empty:
+            fig, ax = plt.subplots(figsize=(10, 6))
+            sns.boxplot(data=static_succ, x="Algorithm", y=metric, hue="InflationFactor",
+                        palette="viridis", ax=ax)
+            ax.set_title(f"Sensitivity: Static Environment - {metric}", fontweight='bold')
+            plt.xticks(rotation=45)
+            plt.tight_layout()
+            fig.savefig(os.path.join(tier2_dir, f"static_sens_{metric_safe}.pdf"), format='pdf')
+            fig.savefig(os.path.join(tier2_dir, f"static_sens_{metric_safe}.png"), dpi=300)
+            plt.close()
+
+        # 2b. Dynamic Sensitivity (Faceted by PedCount)
+        dynamic_succ = succ_df[succ_df["Scenario"] == "dynamic"]
+        if not dynamic_succ.empty:
+            # We filter out Peds 0 from dynamic if it's redundant with static
+            # but usually dynamic starts at 3 peds in this benchmark
+            g = sns.catplot(
+                data=dynamic_succ, x="Algorithm", y=metric,
+                hue="InflationFactor", col="PedCount", col_wrap=2,
+                kind="box", palette="viridis", 
+                height=5, aspect=1.2, sharey=False,
+                margin_titles=True
+            )
+            g.set_axis_labels("Planner", metric)
+            g.set_titles("Dynamic Env - {col_name} Pedestrians", fontweight='bold')
+            for ax in g.axes.flat:
+                for label in ax.get_xticklabels():
+                    label.set_rotation(45)
+            
+            g.savefig(os.path.join(tier2_dir, f"dynamic_sens_{metric_safe}.pdf"), format='pdf')
+            g.savefig(os.path.join(tier2_dir, f"dynamic_sens_{metric_safe}.png"), dpi=300)
+            plt.close()
+
+    # ---------------------------------------------------------
+    # SUCCESS RATES (Article Ready Comparison)
+    # ---------------------------------------------------------
+    print("[Vizu] Generating Success Rate Comparisons...")
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    # Compute rates on nominal set
+    res_list = []
+    for name, group in nominal_df.groupby("Algorithm"):
+        rate, ci_low, ci_high = wilson_ci(len(group[group['Status'].str.upper() == 'SUCCESS']), len(group))
+        res_list.append({"Algorithm": name, "Success Rate (%)": rate * 100, "CI_Low": ci_low*100, "CI_High": ci_high*100})
+    
+    rate_df = pd.DataFrame(res_list)
+    
+    # Custom error bars with Seaborn/Matplotlib
+    sns.barplot(data=rate_df, x="Algorithm", y="Success Rate (%)", palette=algo_palette, ax=ax, edgecolor=".2")
+    
+    # Add error segments manually for Wilson CI
+    for i, row in rate_df.iterrows():
+        ax.errorbar(i, row["Success Rate (%)"], yerr=[[row["Success Rate (%)"] - row["CI_Low"]], [row["CI_High"] - row["Success Rate (%)"]]],
+                    fmt='none', c='black', capsize=5)
+
+    ax.set_title("Overall Success Rate (Nominal Scenario, 95% Wilson CI)", fontweight='bold')
+    ax.set_ylim(0, 105)
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig(os.path.join(tier1_dir, "success_rate.pdf"), format='pdf')
+    plt.savefig(os.path.join(tier1_dir, "success_rate.png"), dpi=300)
+    plt.close()
+
+    print(f"\n[Vizu] All plots saved to: {output_dir}")
+    print(f"  - Tier 1 (Paper): {tier1_dir}")
+    print(f"  - Tier 2 (Appendix): {tier2_dir}")
 
     print(f"\nAll plots saved to: {output_dir}")
 
