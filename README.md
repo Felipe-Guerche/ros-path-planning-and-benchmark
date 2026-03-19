@@ -4,6 +4,36 @@ This repository is an **integrated motion planning & benchmarking framework** fo
 
 It bridges the gap between algorithmic implementation and performance verification by combining the extensive planner collection of [ros_motion_planning](https://github.com/ai-winter/ros_motion_planning) with the metric collection capabilities of [plannie](https://github.com/lidiaxp/plannie).
 
+## 📊 Benchmark Results & Performance
+
+The following results were obtained using the **Robust Research** pipeline with `MASTER_SEED=15257`. The analysis focuses on the **Nominal Case** (Inflation=0.5, PedCount=5) to ensure a balanced comparison across all planner architectures.
+
+### 1. Overall Success Rate
+A* combined with the Artificial Potential Field (APF) local planner demonstrated the highest overall success rate (74.3%), followed closely by Dijkstra-APF (70.1%).
+
+![Success Rate](results/seed_15257/figures/tier1_article/success_rate.png)
+
+*   **Grid-based Planners (A*, Dijkstra):** Showed superior reliability in nominal conditions, effectively navigating traditional static and moderately dynamic scenarios.
+*   **Sampling-based Planners (RRT):** Exhibited lower success rates (~57%) but maintained a more consistent performance in extremely dense maps where grid search complexity peaks.
+*   **Kinematic Planners (Hybrid A*):** Provided smooth, feasible paths (46-52% success) but faced challenges in high-frequency dynamic obstacle avoidance due to higher computational overhead.
+
+### 2. Temporal Efficiency
+Computation time varies significantly between deterministic and stochastic approaches.
+
+![Computation Time](results/seed_15257/figures/tier1_article/Times.png)
+
+*   **Observation:** While A* and Dijkstra are faster to reach a solution, RRT variants show a wider spread in computation time, reflecting their stochastic nature.
+*   **Trade-off:** Planners that prioritize path smoothness (like Hybrid A*) generally require more computation time per cycle compared to raw grid search.
+
+### 3. Metric Distribution (Memory & Distance)
+| Metric | Leader | Observation |
+| :--- | :--- | :--- |
+| **Memory** | A*-DWA | Deterministic planners maintain a lower and more predictable memory footprint. |
+| **Distance** | Dijkstra | Grid-based optimal search consistently produces shorter paths compared to RRT-based exploration. |
+
+---
+*For the complete statistical analysis, including parameter sensitivity (facet grids) and failure case logs, refer to the [results session folder](results/seed_15257/).*
+
 ## 🚀 Key Features
 
 *   **Diverse Algorithm Suite**: access to various Global Planners (A*, Hybrid A*, RRT, Lazy Theta*, etc.) and Local Planners (DWA, APF, MPC, etc.).

@@ -72,7 +72,8 @@ def find_and_merge_csvs(results_dir):
         print("No readable summary files found. Aborting.")
         sys.exit(1)
 
-    merged = pd.concat(dfs, ignore_index=True)
+    df = pd.concat(dfs, ignore_index=True)
+    df["Algorithm"] = df["GlobalPlanner"] + "-" + df["LocalPlanner"]
 
     # ---------------------------------------------------------
     # Strict Variable Isolation
@@ -82,19 +83,36 @@ def find_and_merge_csvs(results_dir):
     potential_vars = ["Scenario", "GlobalPlanner", "LocalPlanner", "PedCount", "InflationFactor", "SweepParam"]
 
     for col in potential_vars:
-        if col in merged.columns:
+        if col in df.columns:
             cols_to_group.append(col)
 
     if cols_to_group:
-        merged["Config_Tag"] = merged[cols_to_group].astype(str).agg('-'.join, axis=1)
-    elif "GlobalPlanner" in merged.columns:
-        merged["Config_Tag"] = merged["GlobalPlanner"]
+        df["Config_Tag"] = df[cols_to_group].astype(str).agg('-'.join, axis=1)
+    elif "GlobalPlanner" in df.columns:
+        df["Config_Tag"] = df["GlobalPlanner"]
     else:
-        merged["Config_Tag"] = "UnknownGroup"
+        df["Config_Tag"] = "UnknownGroup"
 
-    print(f"\nTotal rows after merge: {len(merged)}")
-    print(f"Identified {merged['Config_Tag'].nunique()} unique experimental conditions.")
-    return merged
+    # ---------------------------------------------------------
+    # Strict Variable Isolation
+    # ---------------------------------------------------------
+    # Extract extra parameters from Config_Tag if not present
+    for col in ["InflationFactor", "PedCount"]:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+        else:
+            # Try to extract from Config_Tag: e.g. "dynamic-astar-dwa-PEDS-INFLATION-..."
+            def extract_param(tag, param_type):
+                parts = str(tag).split('-')
+                if len(parts) >= 6:
+                    if param_type == "PedCount": return float(parts[3])
+                    if param_type == "InflationFactor": return float(parts[4])
+                return np.nan
+            df[col] = df["Config_Tag"].apply(lambda x: extract_param(x, col))
+    
+    print(f"\nTotal rows after merge: {len(df)}")
+    print(f"Identified {df['Config_Tag'].nunique()} unique experimental conditions.")
+    return df
 
 
 def wilson_ci(n_success, n_total, z=1.96):
