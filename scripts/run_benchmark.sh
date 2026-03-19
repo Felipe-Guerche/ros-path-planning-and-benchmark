@@ -73,32 +73,52 @@ fi
 
 # Resolve explicit seed from config/script
 if [ "$MASTER_SEED" != "random" ]; then
-    RESULTS_DIR="$PROJECT_RESULTS_DIR/seed_${MASTER_SEED}"
-    mkdir -p "$RESULTS_DIR"
-    echo "$MASTER_SEED" > "$RESULTS_DIR/.master_seed"
-    echo "[State] Using seed: $MASTER_SEED (Folder: results/seed_${MASTER_SEED})"
-elif [ "$FORCE_RESUME_SEED" = true ]; then
-    # Auto-resume latest session if requested
-    LATEST_SEED_FILE=$(ls -t "$PROJECT_RESULTS_DIR"/*/ .master_seed 2>/dev/null | head -n 1)
-    if [ -f "$LATEST_SEED_FILE" ]; then
-        MASTER_SEED=$(cat "$LATEST_SEED_FILE")
-        RESULTS_DIR=$(dirname "$LATEST_SEED_FILE")
-        echo "[State] Resuming with latest session seed: $MASTER_SEED"
-    else
-        MASTER_SEED=$RANDOM
-        RESULTS_DIR="$PROJECT_RESULTS_DIR/seed_${MASTER_SEED}"
+    # For explicit seed, search for latest existing folder if resuming
+    if [ "$FORCE_RESUME_SEED" = true ]; then
+        EXISTING_SESS=$(ls -d "$PROJECT_RESULTS_DIR"/*_seed_${MASTER_SEED} 2>/dev/null | tail -n 1)
+        if [ -n "$EXISTING_SESS" ]; then
+            RESULTS_DIR="$EXISTING_SESS"
+            echo "[State] Resuming in existing session folder: $RESULTS_DIR"
+        fi
+    fi
+    
+    if [ -z "$RESULTS_DIR" ]; then
+        RESULTS_DIR="$PROJECT_RESULTS_DIR/run_$(date +%Y%m%d_%H%M)_seed_${MASTER_SEED}"
         mkdir -p "$RESULTS_DIR"
         echo "$MASTER_SEED" > "$RESULTS_DIR/.master_seed"
-        echo "[State] No session found. Started new random seed: $MASTER_SEED"
+        echo "[State] Created new session: $RESULTS_DIR"
+    fi
+elif [ "$FORCE_RESUME_SEED" = true ]; then
+    # Auto-resume latest session of ANY seed if requested
+    LATEST_SEED_FILE=$(ls -t "$PROJECT_RESULTS_DIR"/*/.master_seed 2>/dev/null | head -n 1)
+    if [ -f "$LATEST_SEED_FILE" ]; then
+        RESULTS_DIR=$(dirname "$LATEST_SEED_FILE")
+        MASTER_SEED=$(cat "$LATEST_SEED_FILE")
+        echo "[State] Resuming latest session: $RESULTS_DIR (Seed: $MASTER_SEED)"
+    else
+        MASTER_SEED=$RANDOM
+        RESULTS_DIR="$PROJECT_RESULTS_DIR/run_$(date +%Y%m%d_%H%M)_seed_${MASTER_SEED}"
+        mkdir -p "$RESULTS_DIR"
+        echo "$MASTER_SEED" > "$RESULTS_DIR/.master_seed"
+        echo "[State] No session found. Started new random: $RESULTS_DIR"
     fi
 else
-    # New Random Seed
+    # New Random Session
     MASTER_SEED=$RANDOM
-    RESULTS_DIR="$PROJECT_RESULTS_DIR/seed_${MASTER_SEED}"
+    RESULTS_DIR="$PROJECT_RESULTS_DIR/run_$(date +%Y%m%d_%H%M)_seed_${MASTER_SEED}"
     mkdir -p "$RESULTS_DIR"
     echo "$MASTER_SEED" > "$RESULTS_DIR/.master_seed"
-    echo "[State] Generated and persisted new random seed: $MASTER_SEED"
+    echo "[State] Started new random session: $RESULTS_DIR"
 fi
+
+# =================================================================
+# Persistent Traceability (Auto-Backup Config)
+# =================================================================
+echo "[Trace] Backing up configuration to session folder..."
+cp seed.md "$RESULTS_DIR/" 2>/dev/null || true
+cp src/core/system_config/system_config/system_config.pb.txt "$RESULTS_DIR/" 2>/dev/null || true
+# Find user_config.yaml (might be in different paths in different branches, but usually in src/core)
+find src -name "user_config.yaml" -exec cp {} "$RESULTS_DIR/" \; 2>/dev/null || true
 
 echo "============================================="
 echo "  Parallel Benchmark Orchestrator"

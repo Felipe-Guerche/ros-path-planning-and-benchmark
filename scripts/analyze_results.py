@@ -212,6 +212,35 @@ def analyze(df, group_col="Config_Tag", metrics=None):
         run_kruskal_wallis(groups, metric)
 
 
+def report_failures(df, output_dir):
+    """Identify and log specific failure cases by Seed for each configuration."""
+    if "Status" not in df.columns or "Seed" not in df.columns:
+        return
+
+    failures = df[df["Status"].str.upper() != "SUCCESS"]
+    if failures.empty:
+        print("\nNo failure cases detected. All runs successful!")
+        return
+
+    report_path = os.path.join(output_dir, "failure_report.txt")
+    print(f"\nFound {len(failures)} failure cases. Generating report: {report_path}")
+
+    with open(report_path, "w") as f:
+        f.write("==========================================================\n")
+        f.write("       BENCHMARK FAILURE CASE REPORT (SEED ANALYSIS)\n")
+        f.write("==========================================================\n\n")
+        f.write(f"Total Failures: {len(failures)} / {len(df)}\n\n")
+
+        for name, group in failures.groupby("Config_Tag"):
+            f.write(f"--- Configuration: {name} ---\n")
+            f.write(f"  Failures: {len(group)}\n")
+            seeds = sorted(group["Seed"].unique().tolist())
+            f.write(f"  Problematic Seeds: {', '.join(map(str, seeds))}\n")
+            f.write("\n")
+
+    print(f"Failure report generated successfully.")
+
+
 def generate_plots(df, group_col="Config_Tag", output_dir="results/figures"):
     """Generate publication-ready plots."""
     try:
@@ -317,6 +346,9 @@ def main():
 
     # Run Analysis
     analyze(df, group_col=args.group_by)
+
+    # Report Failures
+    report_failures(df, args.results_dir or os.path.dirname(merged_path))
 
     # Run Plots
     if args.plot:
