@@ -9,6 +9,8 @@ It bridges the gap between algorithmic implementation and performance verificati
 *   **Diverse Algorithm Suite**: access to various Global Planners (A*, Hybrid A*, RRT, Lazy Theta*, etc.) and Local Planners (DWA, APF, MPC, etc.).
 *   **Automated Benchmarking**: A system to run batch simulations (`scripts/benchmark_worker.sh`), cycling through planner configurations and dynamic scenarios.
 *   **Performance Metrics**: Automatically captures execution time, path length, CPU usage, and Memory consumption (MB & %) for every run.
+*   **Scientific Reproducibility**: Seed-based reproducibility with per-run logging and configuration auto-backup.
+*   **Automated Data Analysis**: Built-in statistical analysis (Kruskal-Wallis, Mann-Whitney U) and failure case reporting.
 *   **Dynamic Environments**: Support for warehouse environments with pedestrian simulation.
 
 ## 🏗️ Architecture & Credits
@@ -78,15 +80,22 @@ To run a full scientific evaluation (cycling through planners and scenarios):
 2.  **Execute**:
     ```bash
     cd scripts
-    ./run_benchmark.sh
+    ./run_benchmark.sh [options]
     ```
+    
+    **Available Options**:
+    - `--new-seed`: Force the generation of a new random Master Seed.
+    - `--resume`: Search for and resume the latest existing session for the current seed.
 
     > **Note**: This will automatically spin up Docker containers, launch Gazebo headless, run the navigation task, kill the processes, and aggregate the results.
 
 3.  **View Results**:
-    Results are saved in `src/plannie-main/results/`.
-    *   **Individual Runs**: `benchmark_<scenario>_<planners>_runX.txt` (detailed trajectory & resource log).
-    *   **Summary**: `battery_summary_<timestamp>.csv` (Aggregated table with Success/Fail, Time, Distance, CPU, Memory).
+    Results are saved in `results/run_<timestamp>_seed_<seed>/`.
+    - **Backups**: Automatically saves copies of `user_config.yaml`, `system_config.pb.txt`, and `seed.md`.
+    - **Individual Runs**: `benchmark_<scenario>_<planners>_runX.txt` (detailed trajectory & resource log).
+    - **Summary**: `battery_summary_*.csv` (Aggregated table with Success/Fail, Time, Distance, CPU, Memory).
+    - **Analysis**: `failure_report.txt` (List of problematic seeds per planner).
+    - **Figures**: Publication-ready plots in the `figures/` subdirectory.
 
 ### 🎮 Running a Single Simulation
 If you just want to test one configuration manually:

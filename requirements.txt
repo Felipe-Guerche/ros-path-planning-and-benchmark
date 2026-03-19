@@ -1,5 +1,8 @@
-psutil>=5.8.0
-matplotlib>=3.3.0
-pandas>=1.1.0
-numpy>=1.19.0
-scipy>=1.7.0
+pandas
+numpy
+scipy
+matplotlib
+psutil
+setuptools
+catkin-tools
+conan==1.59.0

@@ -17,7 +17,7 @@ sudo apt-get install -y \
 echo ""
 echo "[2/4] Installing Python Dependencies (pip)..."
 # Using pip3 directly as requested
-pip3 install -r ../requirements.txt
+pip3 install -r requirements.txt
 
 # Additional pip dependencies explicit in the dockerfile but might be needed locally
 pip3 install setuptools catkin-tools conan==1.59.0

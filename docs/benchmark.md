@@ -7,14 +7,20 @@ End-to-end automated benchmark for path planning algorithms with Docker isolatio
 ```
 run_benchmark.sh   ← Run this from project root (Ubuntu)
 ├── docker build             (one-time)
-├── docker run [Worker 0]    ── docker_entrypoint.sh → benchmark_worker.sh
-├── docker run [Worker 1]    ── docker_entrypoint.sh → benchmark_worker.sh
-├── docker run [Worker 2]    ── docker_entrypoint.sh → benchmark_worker.sh
-├── docker run [Worker 3]    ── docker_entrypoint.sh → benchmark_worker.sh
-│                                ├── generate_pedestrian_config.py (N peds, FIRST)
-│                                ├── generate_random_poses.py      (safe start/goal, excludes peds)
-│                                └── benchmark_manager.py           (collect metrics)
-└── analyze_results.py       (merge + stats + plots)
+├── docker run [Worker N]    ── docker_entrypoint.sh → benchmark_worker.sh
+│                                ├── generate_pedestrian_config.py (Dynamic Obstacles)
+│                                ├── generate_random_poses.py      (Safe Sampling)
+│                                └── benchmark_manager.py           (Metric Collection)
+└── analyze_results.py       (merge + stats + plots + failure report)
+
+### Results Structure (Robust Research)
+All data is now isolated by session and seed:
+`results/run_YYYYMMDD_HHMM_seed_XXXX/`
+├── `battery_summary_*.csv`   (Aggregated results)
+├── `failure_report.txt`      (Problematic seed analysis)
+├── `figures/`                (Publication-ready plots)
+├── `user_config.yaml`        (Configuration backup)
+└── `system_config.pb.txt`    (System parameters backup)
 ```
 
 Each Docker container runs **one planner combination** in isolation with fixed CPU/RAM.
