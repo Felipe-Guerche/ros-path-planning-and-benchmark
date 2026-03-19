@@ -11,7 +11,7 @@ The following results were obtained using the **Robust Research** pipeline with 
 ### 1. Overall Success Rate
 A* combined with the Artificial Potential Field (APF) local planner demonstrated the highest overall success rate (74.3%), followed closely by Dijkstra-APF (70.1%).
 
-![Success Rate](results/seed_15257/figures/tier1_article/success_rate.png)
+![Success Rate](assets/benchmark/success_rate.png)
 
 *   **Grid-based Planners (A*, Dijkstra):** Showed superior reliability in nominal conditions, effectively navigating traditional static and moderately dynamic scenarios.
 *   **Sampling-based Planners (RRT):** Exhibited lower success rates (~57%) but maintained a more consistent performance in extremely dense maps where grid search complexity peaks.
@@ -20,7 +20,7 @@ A* combined with the Artificial Potential Field (APF) local planner demonstrated
 ### 2. Temporal Efficiency
 Computation time varies significantly between deterministic and stochastic approaches.
 
-![Computation Time](results/seed_15257/figures/tier1_article/Times.png)
+![Computation Time](assets/benchmark/Times.png)
 
 *   **Observation:** While A* and Dijkstra are faster to reach a solution, RRT variants show a wider spread in computation time, reflecting their stochastic nature.
 *   **Trade-off:** Planners that prioritize path smoothness (like Hybrid A*) generally require more computation time per cycle compared to raw grid search.
