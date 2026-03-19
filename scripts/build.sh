@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 add_path_to_bashrc() {
     local TARGET_PATH="$1"

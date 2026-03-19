@@ -25,6 +25,7 @@ RUN apt-get update --fix-missing\
     ros-noetic-navfn \
     xvfb \
     bc \
+    bsdmainutils \
     && rm -rf /var/lib/apt/lists/*
 
 # python packages (benchmark dependencies)
