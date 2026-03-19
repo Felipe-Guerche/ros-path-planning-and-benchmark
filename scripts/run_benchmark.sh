@@ -30,7 +30,7 @@ BASE_ROS_PORT=11311
 BASE_GAZEBO_PORT=11345
 
 # --- Randomization & Reproducibility ---
-MASTER_SEED="random"
+MASTER_SEED="9002"
 if [ -f "./seed.md" ]; then
     MASTER_SEED=$(head -n 1 ./seed.md | tr -d '\r\n ')
     echo "[Config] Found seed.md, using MASTER_SEED=$MASTER_SEED"
@@ -57,46 +57,46 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-RESULTS_DIR="$(pwd)/results"
-mkdir -p "$RESULTS_DIR"
+PROJECT_RESULTS_DIR="$(pwd)/results"
+mkdir -p "$PROJECT_RESULTS_DIR"
 
 # =================================================================
 # Resolve Master Seed
 # =================================================================
-SEED_FILE="$RESULTS_DIR/.master_seed"
 
-if [ -f "$SEED_FILE" ] && [ "$FORCE_NEW_SEED" = false ] && [ "$FORCE_RESUME_SEED" = false ]; then
-    echo "============================================="
-    echo "  Existing Seed Found: $(cat "$SEED_FILE")"
-    echo "  What would you like to do?"
-    echo "  1) Resume with existing seed (keep parity)"
-    echo "  2) Generate a NEW random seed (fresh start)"
-    echo "============================================="
-    read -p "  Enter choice [1/2]: " -n 1 -r
-    echo ""
-    if [[ ! $REPLY =~ ^[1]$ ]]; then
-        MASTER_SEED="random"
-        rm -f "$SEED_FILE"
-    else
-        FORCE_RESUME_SEED=true
-    fi
+# Legacy check (if .master_seed still exists in root, use it as default)
+if [ -f "$PROJECT_RESULTS_DIR/.master_seed" ] && [ "$MASTER_SEED" == "random" ]; then
+    LEGACY_SEED=$(cat "$PROJECT_RESULTS_DIR/.master_seed")
+    MASTER_SEED="$LEGACY_SEED"
+    echo "[Config] Found legacy .master_seed ($LEGACY_SEED), using as session seed."
 fi
 
-if [ "$FORCE_NEW_SEED" = true ]; then
-    rm -f "$SEED_FILE"
-    MASTER_SEED="random"
-fi
-
+# Resolve explicit seed from config/script
 if [ "$MASTER_SEED" != "random" ]; then
-    # seed.md or explicit override takes priority
-    echo "$MASTER_SEED" > "$SEED_FILE"
-    echo "[State] Using seed from seed.md/config: $MASTER_SEED"
-elif [ -f "$SEED_FILE" ] && [ "$FORCE_RESUME_SEED" = true ]; then
-    MASTER_SEED=$(cat "$SEED_FILE")
-    echo "[State] Resuming with persisted random seed: $MASTER_SEED"
+    RESULTS_DIR="$PROJECT_RESULTS_DIR/seed_${MASTER_SEED}"
+    mkdir -p "$RESULTS_DIR"
+    echo "$MASTER_SEED" > "$RESULTS_DIR/.master_seed"
+    echo "[State] Using seed: $MASTER_SEED (Folder: results/seed_${MASTER_SEED})"
+elif [ "$FORCE_RESUME_SEED" = true ]; then
+    # Auto-resume latest session if requested
+    LATEST_SEED_FILE=$(ls -t "$PROJECT_RESULTS_DIR"/*/ .master_seed 2>/dev/null | head -n 1)
+    if [ -f "$LATEST_SEED_FILE" ]; then
+        MASTER_SEED=$(cat "$LATEST_SEED_FILE")
+        RESULTS_DIR=$(dirname "$LATEST_SEED_FILE")
+        echo "[State] Resuming with latest session seed: $MASTER_SEED"
+    else
+        MASTER_SEED=$RANDOM
+        RESULTS_DIR="$PROJECT_RESULTS_DIR/seed_${MASTER_SEED}"
+        mkdir -p "$RESULTS_DIR"
+        echo "$MASTER_SEED" > "$RESULTS_DIR/.master_seed"
+        echo "[State] No session found. Started new random seed: $MASTER_SEED"
+    fi
 else
+    # New Random Seed
     MASTER_SEED=$RANDOM
-    echo "$MASTER_SEED" > "$SEED_FILE"
+    RESULTS_DIR="$PROJECT_RESULTS_DIR/seed_${MASTER_SEED}"
+    mkdir -p "$RESULTS_DIR"
+    echo "$MASTER_SEED" > "$RESULTS_DIR/.master_seed"
     echo "[State] Generated and persisted new random seed: $MASTER_SEED"
 fi
 
@@ -166,10 +166,11 @@ dispatch_job() {
     local summary_file="$RESULTS_DIR/battery_summary_${job_tag}.csv"
     RESUME_FROM_ROW=0
     if [ -f "$summary_file" ]; then
-        local n_peds=1; [ "$scenario" == "dynamic" ] && n_peds=3
+        local n_peds=1
+        if [ "$scenario" == "dynamic" ]; then n_peds=3; fi
         local n_inflations=3
         local n_sweeps=$(echo "$sweep_vals" | tr ':' '\n' | wc -l)
-        [ "$sweep_vals" == "default" ] && n_sweeps=1
+        if [ "$sweep_vals" == "default" ]; then n_sweeps=1; fi
         local expected=$(( (n_peds * n_sweeps * n_inflations * NUM_RUNS) + 1 ))
         local actual=$(wc -l < "$summary_file")
 
@@ -178,7 +179,7 @@ dispatch_job() {
             return 0
         else
             RESUME_FROM_ROW=$(( actual - 1 ))
-            [ "$RESUME_FROM_ROW" -lt 0 ] && RESUME_FROM_ROW=0
+            if [ "$RESUME_FROM_ROW" -lt 0 ]; then RESUME_FROM_ROW=0; fi
             echo "  [Resume] Job $job_tag partial ($actual/$expected). Resuming from row $RESUME_FROM_ROW..."
         fi
     fi
@@ -216,7 +217,9 @@ wait_for_slot() {
             fi
         done
         RUNNING_PIDS=("${new_pids[@]}")
-        [ ${#RUNNING_PIDS[@]} -ge $MAX_WORKERS ] && sleep 5
+        if [ ${#RUNNING_PIDS[@]} -ge $MAX_WORKERS ]; then
+            sleep 5
+        fi
     done
 }
 

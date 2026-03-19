@@ -1,4 +1,6 @@
 #!/bin/bash
+set -e
+set -o pipefail
 
 # Suppress Warnings
 export ROS_PYTHON_WARNINGS="ignore"
