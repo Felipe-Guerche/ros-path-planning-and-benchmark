@@ -473,24 +473,24 @@ def main():
     if args.summary_file:
         print(f"Analyzing single file: {args.summary_file}")
         df = pd.read_csv(args.summary_file)
+        # Infer results_dir from summary_file
+        results_dir = args.results_dir or os.path.dirname(os.path.abspath(args.summary_file))
         if "Config_Tag" not in df.columns and args.group_by == "Config_Tag":
             df["Config_Tag"] = df["GlobalPlanner"] if "GlobalPlanner" in df.columns else "Unknown"
     else:
         results_dir = args.results_dir or os.path.join(
             os.path.dirname(__file__), "..", "src", "plannie-main", "results"
         )
-        df = find_and_merge_csvs(results_dir)
-
-    # Save merged output
-    if args.results_dir:
-        merged_path = os.path.join(args.results_dir, "merged_results.csv")
-        df.to_csv(merged_path, index=False)
+        df, merged_path = find_and_merge_csvs(results_dir)
+        # Save merged output
+        if args.results_dir:
+            df.to_csv(merged_path, index=False)
 
     # Run Analysis
     analyze(df, group_col=args.group_by)
 
     # Report Failures
-    report_failures(df, args.results_dir or os.path.dirname(merged_path))
+    report_failures(df, results_dir)
 
     # Run Plots
     if args.plot:

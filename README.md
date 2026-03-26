@@ -9,14 +9,22 @@ It bridges the gap between algorithmic implementation and performance verificati
 The following results were obtained using the **Robust Research** pipeline with `MASTER_SEED=15257`. The analysis focuses on the **Baseline Case** (Inflation=0.5, PedCount=3) to provide a statistically significant comparison across 12 planner configurations.
 
 ### 1. Overall Success Rate
-A* combined with the Artificial Potential Field (APF) local planner demonstrated the highest overall success rate (**80.8%**), followed closely by Dijkstra-APF (**80.8%**).
+The following table summarizes the performance of the top planner combinations in the **Nominal Scenario** (Inflation=0.7, Dynamic Obstacles).
+
+| Planner Suite | Success Rate | Time (s) | Distance (m) | Smoothness (rad) |
+| :--- | :---: | :---: | :---: | :---: |
+| **A* + APF** | **80.8%** | 34.6 | 15.9 | 3.9 |
+| **Dijkstra + APF** | 80.8% | 33.7 | 15.8 | 4.1 |
+| **RRT + APF** | 63.3% | 45.1 | 18.2 | 4.8 |
+| **D* Lite + APF** | 55.8% | 31.1 | 15.5 | 4.2 |
+| **Hybrid A* + APF** | 39.2% | 40.2 | 16.3 | 4.5 |
+| **Lazy Theta* + APF**| 21.7% | 31.8 | 15.4 | 3.8 |
 
 ![Success Rate](assets/benchmark/success_rate.png)
 
-*   **Grid-based Planners (A*, Dijkstra):** Showed superior reliability in dynamic conditions, efficiently navigating the warehouse environment.
--   **A* + APF Robustness:** Maintains a critical advantage in high-density scenarios ($N=10$), maintaining reliability where sampling approaches often struggle.
--   **Incremental & Sampling Approaches:** RRT variants (**~63-68%**) and D* Lite (**~56-76%**) show competitive performance but are more sensitive to dynamic obstacle density.
--   **Technical Transparency:** Data structures and implementation details for all planners are documented in [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md).
+*   **Grid-based Dominance:** A* and Dijkstra remain the most reliable planners in dynamic warehouse environments.
+-   **Statistical Rigor:** All metrics are derived from the aggregated **Seed 15257** master dataset (1,920 runs), providing high confidence intervals.
+-   **Technical Transparency:** Data structures and implementation details are documented in [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md).
 
 ### 2. Temporal Efficiency & Smoothness
 Computation time and path quality exhibit clear trade-offs between deterministic and sampling-based methods.
@@ -24,20 +32,20 @@ Computation time and path quality exhibit clear trade-offs between deterministic
 ![Computation Time](assets/benchmark/Times.png)
 ![Smoothness](assets/benchmark/Smoothnessrad.png)
 
-*   **Speed Leader:** **A* + APF** achieved the most balanced mean computation time (**34.6s**) in dynamic scenarios while maintaining high success in static tests.
-*   **Smoothness Leader:** **A* + APF** produced consistent trajectories (**3.9 rad**) due to its deterministic search and reactive avoidance.
+*   **Speed Leader:** **D* Lite** and **Lazy Theta*** achieved the fastest mean computation times, though at a significant cost to success rate in dynamic zones.
+*   **Path Quality:** **A* + APF** maintains the most consistent balance between reachability and trajectory smoothness.
 
 ### 3. Resource Usage (Memory & CPU)
 ![Memory Usage](assets/benchmark/MemoryMiB.png)
 
 | Metric | Leader | Empirical Observation |
 | :--- | :--- | :--- |
-| **CPU Usage** | A* + APF | Demonstrated the lowest CPU footprint (**~9.4%**) making it ideal for embedded deployment. |
-| **Memory** | Hybrid A* | Showed a competitive memory footprint (**~41-42 MiB**), while D* Lite required the highest (**~61-63 MiB**). |
-| **Success Overall**| A* + APF | Emerged as the most robust configuration across all tested pedestrian densities and inflation levels. |
+| **CPU Usage** | A* + APF | Lowest CPU footprint (**~9.4%**) due to efficient grid search and reactive local avoidance. |
+| **Memory** | Hybrid A* | Competitive memory footprint (**~41 MiB**) despite 3D $(x,y,\theta)$ search space. |
+| **Reliability**| A* + APF | Only configuration maintaining significant success across the full spectrum of pedestrian densities ($N=3,5,10$). |
 
 ---
-*For the complete statistical analysis, including parameter sensitivity (facet grids) and failure case logs, refer to the [results session folder](results/seed_15257/).*
+*For the complete statistical analysis and failure case logs, refer to [results/seed_15257/merges/final_summary_seed_15257.csv](results/seed_15257/merges/final_summary_seed_15257.csv).*
 
 ## 🚀 Key Features
 
