@@ -186,16 +186,20 @@ dispatch_job() {
     local summary_file="$RESULTS_DIR/battery_summary_${job_tag}.csv"
     RESUME_FROM_ROW=0
     if [ -f "$summary_file" ]; then
-        local n_peds=1
-        if [ "$scenario" == "dynamic" ]; then n_peds=3; fi
+        # Calculation: (Peds * Sweeps * Inflations * Runs) + 1 (header)
+        local n_peds=3
+        if [ "$scenario" == "static" ]; then n_peds=1; fi
         local n_inflations=3
         local n_sweeps=$(echo "$sweep_vals" | tr ':' '\n' | wc -l)
         if [ "$sweep_vals" == "default" ]; then n_sweeps=1; fi
+        
         local expected=$(( (n_peds * n_sweeps * n_inflations * NUM_RUNS) + 1 ))
-        local actual=$(wc -l < "$summary_file")
+        # Use robust grep counting to handle potential corruption
+        local actual=$(grep -v "Scenario" "$summary_file" | wc -l || echo 0)
+        actual=$((actual + 1)) # Add 1 for header equivalent
 
         if [ "$actual" -ge "$expected" ]; then
-            echo "  [Skip] Job $job_tag is already complete."
+            echo "  [Skip] Job $job_tag is already complete ($actual/$expected)."
             return 0
         else
             RESUME_FROM_ROW=$(( actual - 1 ))
@@ -224,6 +228,7 @@ dispatch_job() {
         "$DOCKER_IMAGE" \
         > "$RESULTS_DIR/log_${container_name}.txt" 2>&1 &
     RUNNING_PIDS+=($!)
+    sleep 3  # Prevent container name race conditions
 }
 
 wait_for_slot() {

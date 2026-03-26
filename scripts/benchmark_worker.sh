@@ -59,9 +59,9 @@ SYSTEM_CONFIG="../src/core/system_config/system_config/system_config.pb.txt"
 # Unified Output: In Docker mode, use the Job Tag for persistence. 
 # In Legacy mode, keep the timestamp.
 if [ -n "$JOB_TAG" ]; then
-    SUMMARY_FILE="$(pwd)/../src/plannie-main/results/battery_summary_${JOB_TAG}.csv"
+    SUMMARY_FILE="$(pwd)/results/battery_summary_${JOB_TAG}.csv"
 else
-    SUMMARY_FILE="$(pwd)/../src/plannie-main/results/battery_summary_$(date +%Y%m%d_%H%M%S).csv"
+    SUMMARY_FILE="$(pwd)/results/battery_summary_$(date +%Y%m%d_%H%M%S).csv"
 fi
 
 echo "=========================================="
@@ -81,6 +81,11 @@ echo "=========================================="
 
 # Resume support: skip this many already-completed data rows.
 RESUME_FROM_ROW="${RESUME_FROM_ROW:-0}"
+if [ "$RESUME_FROM_ROW" -eq 0 ] && [ -f "$SUMMARY_FILE" ]; then
+    # Count rows excluding header
+    RESUME_FROM_ROW=$(grep -v "Scenario" "$SUMMARY_FILE" | wc -l)
+    echo "[Auto-Resume] Identified $RESUME_FROM_ROW existing records. Resuming..."
+fi
 GLOBAL_RUN_COUNT=0
 echo "[Resume] Skipping first $RESUME_FROM_ROW completed rows."
 
@@ -194,7 +199,7 @@ for scenario in "${SCENARIOS[@]}"; do
                             
                             # Start Simulation
                             echo "[2/4] Starting Simulation..."
-                            ./launch_simulator.sh > /dev/null 2>&1 &
+                            ./launch_simulator.sh > simulator_debug_${i}.log 2>&1 &
                             SIM_PID=$!
                             
                             # Wait for Readiness
@@ -239,7 +244,9 @@ for scenario in "${SCENARIOS[@]}"; do
 
                             # Shell-level timeout: MAX_TIMEOUT + 60s safety margin.
                             # Guards against Gazebo/ROS freezes where internal callbacks never fire.
-                            SHELL_TIMEOUT=$(echo "$MAX_TIMEOUT + 60" | bc)
+                            # Strip decimal part if exists for shell arithmetic
+                            INT_TIMEOUT=${MAX_TIMEOUT%.*}
+                            SHELL_TIMEOUT=$((INT_TIMEOUT + 60))
                             timeout "$SHELL_TIMEOUT" roslaunch plannie benchmark.launch \
                                 planner:="$PLANNER_TAG" \
                                 goal_x:=$GOAL_X goal_y:=$GOAL_Y \

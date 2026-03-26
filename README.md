@@ -6,17 +6,17 @@ It bridges the gap between algorithmic implementation and performance verificati
 
 ## 📊 Benchmark Results & Performance
 
-The following results were obtained using the **Robust Research** pipeline with `MASTER_SEED=15257`. The analysis focuses on the **Nominal Case** (Inflation=0.5, PedCount=5) to ensure a balanced comparison across all planner architectures.
+The following results were obtained using the **Robust Research** pipeline with `MASTER_SEED=15257`. The analysis focuses on the **Baseline Case** (Inflation=0.5, PedCount=3) to provide a statistically significant comparison across 12 planner configurations.
 
 ### 1. Overall Success Rate
-A* combined with the Artificial Potential Field (APF) local planner demonstrated the highest overall success rate (**72.9%**), followed by Dijkstra-APF (**70.1%**).
+A* combined with the Artificial Potential Field (APF) local planner demonstrated the highest overall success rate (**80.8%**), followed closely by Dijkstra-APF (**80.8%**).
 
 ![Success Rate](assets/benchmark/success_rate.png)
 
-*   **Grid-based Planners (A*, Dijkstra):** Showed superior reliability in nominal conditions, effectively navigating traditional static and moderately dynamic scenarios.
-*   **Kinematic Planners (Hybrid A*):** Provided smooth, feasible paths (**~46-52%** success) but faced challenges in high-frequency dynamic obstacle avoidance. The low success rate is primarily due to the **Reed-Shepp/Dubins heuristics**, which often lead the kinematic expansion too close to dynamic obstacles, causing excessive computational overhead and timeouts before a solution is reached.
-*   **Lazy Theta* (0% Success):** The benchmark recorded a zero success rate for this algorithm. This is empirically attributed to a **failure in the Line-of-Sight (LOS) implementation** or memory overflows within this specific repository's plugin when handling high-frequency costmap updates, rather than a conceptual limitation of the Theta architecture itself.
-*   **Local Planner Impact:** Across almost all global planners, **APF** consistently yielded higher success rates than **DWA** in this benchmark's density settings.
+*   **Grid-based Planners (A*, Dijkstra):** Showed superior reliability in dynamic conditions, efficiently navigating the warehouse environment.
+-   **A* + APF Robustness:** Maintains a critical advantage in high-density scenarios ($N=10$), maintaining reliability where sampling approaches often struggle.
+-   **Incremental & Sampling Approaches:** RRT variants (**~63-68%**) and D* Lite (**~56-76%**) show competitive performance but are more sensitive to dynamic obstacle density.
+-   **Technical Transparency:** Data structures and implementation details for all planners are documented in [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md).
 
 ### 2. Temporal Efficiency & Smoothness
 Computation time and path quality exhibit clear trade-offs between deterministic and sampling-based methods.
@@ -24,16 +24,17 @@ Computation time and path quality exhibit clear trade-offs between deterministic
 ![Computation Time](assets/benchmark/Times.png)
 ![Smoothness](assets/benchmark/Smoothnessrad.png)
 
-*   **Speed Leader:** **D*-Lite (APF)** achieved the fastest mean computation time (**39.9s**) among successful runs, although at the cost of a lower success rate (56.1%) compared to A*.
-*   **Smoothness Trade-off:** RRT-based planners, while computationally intensive, often produce higher variance in path smoothness (rad), whereas grid-planners maintain tighter, more predictable trajectory profiles.
+*   **Speed Leader:** **A* + APF** achieved the most balanced mean computation time (**34.6s**) in dynamic scenarios while maintaining high success in static tests.
+*   **Smoothness Leader:** **A* + APF** produced consistent trajectories (**3.9 rad**) due to its deterministic search and reactive avoidance.
 
-### 3. Resource Usage (Memory & Distance)
+### 3. Resource Usage (Memory & CPU)
 ![Memory Usage](assets/benchmark/MemoryMiB.png)
 
 | Metric | Leader | Empirical Observation |
 | :--- | :--- | :--- |
-| **Memory** | RRT-APF | Showed the lowest mean memory footprint (**40.8 MiB**), whereas D*-Lite exhibited the highest (**62.4 MiB**) due to its complex node management. |
-| **Distance** | A*-DWA | Grid-based optimal search consistently produces 5-10% shorter paths compared to sampling-based exploration. |
+| **CPU Usage** | A* + APF | Demonstrated the lowest CPU footprint (**~9.4%**) making it ideal for embedded deployment. |
+| **Memory** | Hybrid A* | Showed a competitive memory footprint (**~41-42 MiB**), while D* Lite required the highest (**~61-63 MiB**). |
+| **Success Overall**| A* + APF | Emerged as the most robust configuration across all tested pedestrian densities and inflation levels. |
 
 ---
 *For the complete statistical analysis, including parameter sensitivity (facet grids) and failure case logs, refer to the [results session folder](results/seed_15257/).*
@@ -44,7 +45,10 @@ Computation time and path quality exhibit clear trade-offs between deterministic
 *   **Automated Benchmarking**: A system to run batch simulations (`scripts/benchmark_worker.sh`), cycling through planner configurations and dynamic scenarios.
 *   **Performance Metrics**: Automatically captures execution time, path length, CPU usage, and Memory consumption (MB & %) for every run.
 *   **Scientific Reproducibility**: Seed-based reproducibility with per-run logging and configuration auto-backup.
-*   **Automated Data Analysis**: Built-in statistical analysis (Kruskal-Wallis, Mann-Whitney U) and failure case reporting.
+*   **Publication Pipeline**: Includes `scripts/prepare_paper_results.py` for automated **LaTeX Table** snippets and 300 DPI figure generation (Success Rate, Boxplots, Heatmaps).
+*   **Automated Data Analysis**: Built-in statistical analysis (Kruskal-Wallis, Mann-Whitney U) and failure case reporting via `analyze_results.py`.
+*   **Real-time Monitoring**: Track simulation progress and CSV health via `scripts/monitor.sh`.
+*   **Safe Execution**: Automated process cleanup (`cleanup_processes.sh`) and headless rendering for resource-constrained environments.
 *   **Dynamic Environments**: Support for warehouse environments with pedestrian simulation.
 
 ## 🏗️ Architecture & Credits
@@ -63,7 +67,7 @@ While `plannie` was originally designed for **UAVs (Unmanned Aerial Vehicles)** 
 *   **Metric Expansion**: Added support for **Megabytes (MB)** memory tracking (not just %) and Total System RAM context.
 *   **World & Robots**: Standardized on a Warehouse environment with dynamic pedestrians, replacing the original drone scenarios.
 
-## � Project Structure
+## 📋 Project Structure
 ```text
 .
 ├── scripts/
@@ -72,10 +76,11 @@ While `plannie` was originally designed for **UAVs (Unmanned Aerial Vehicles)** 
 ├── src/
 │   ├── plannie-main/      # Plannie Core Modules (Metric Collection)
 │   └── ros_motion_planning/ # Simulation env & Planners
+|── results/               # Persistent storage for benchmark data
 └── requirements.txt       # Python dependencies
 ```
 
-## �📦 Installation
+## 📦 Installation
 
 **System Requirements**:
 *   Ubuntu 20.04 LTS
@@ -100,36 +105,29 @@ The benchmark results presented in this work were collected on a high-performanc
 ## 🛠️ Usage
 
 ### 🧪 Running the Benchmark Battery (Recommended)
+
 To run a full scientific evaluation (cycling through planners and scenarios):
 
-1.  **Configure the Test**:
-    Edit `scripts/run_benchmark.sh` to select your desired planners:
-    ```bash
-    GLOBAL_PLANNERS=("astar" "rrt" "hybrid_astar")
-    LOCAL_PLANNERS=("dwa" "apf")
-    SCENARIOS=("static" "dynamic")
-    NUM_RUNS="30"  # 30 runs for statistical relevance
-    ```
-
-2.  **Execute**:
+1.  **Execute the Orchestrator**:
     ```bash
     cd scripts
     ./run_benchmark.sh [options]
     ```
     
     **Available Options**:
-    - `--new-seed`: Force the generation of a new random Master Seed.
-    - `--resume`: Search for and resume the latest existing session for the current seed.
+    - `--new-seed`: Generate a new random Master Seed.
+    - `--resume`: Auto-detect and resume the latest session for the current seed.
+    - `--workers N`: Specify parallel containers (default: 6).
 
-    > **Note**: This will automatically spin up Docker containers, launch Gazebo headless, run the navigation task, kill the processes, and aggregate the results.
+2.  **Monitor Progress**:
+    While the benchmark is running, you can monitor the CSV growth in real-time:
+    ```bash
+    ./scripts/monitor.sh
+    ```
 
-3.  **View Results**:
-    Results are saved in `results/run_<timestamp>_seed_<seed>/`.
-    - **Backups**: Automatically saves copies of `user_config.yaml`, `system_config.pb.txt`, and `seed.md`.
-    - **Individual Runs**: `benchmark_<scenario>_<planners>_runX.txt` (detailed trajectory & resource log).
-    - **Summary**: `battery_summary_*.csv` (Aggregated table with Success/Fail, Time, Distance, CPU, Memory).
-    - **Analysis**: `failure_report.txt` (List of problematic seeds per planner).
-    - **Figures**: Publication-ready plots in the `figures/` subdirectory.
+3.  **View Results Analysis**:
+    Results are saved in `results/run_<timestamp>_seed_<seed>/`. 
+    The folder includes publication-ready plots in the `figures/` subdirectory.
 
 ### 🎮 Running a Single Simulation
 If you just want to test one configuration manually:
@@ -138,7 +136,7 @@ If you just want to test one configuration manually:
 cd scripts
 ./launch_simulator.sh
 ```
-*   Use **RViz** (2D Nav Goal) to send a goal manully.
+*   Use **RViz** (2D Nav Goal) to send a goal manually.
 *   *Note: Manual runs may not log metrics unless the benchmark node is explicitly launched.*
 
 ## ⚙️ Configuration
@@ -154,5 +152,5 @@ If you use this benchmark in your research, please cite the original authors who
 
 *The citation for this specific adaptation/paper will be added upon publication.*
 
-## �� Contact
+## 📬 Contact
 For questions regarding the adaptation for Ground Vehicles or the Metric extensions, please open an Issue in this repository.
