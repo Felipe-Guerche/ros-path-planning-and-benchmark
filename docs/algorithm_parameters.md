@@ -1,10 +1,10 @@
-# Parâmetros dos Algoritmos de Planejamento de Caminho
+# Path Planning Algorithm Parameters
 
-Este documento descreve os parâmetros importantes dos algoritmos de planejamento de caminho implementados neste projeto. Inclui os algoritmos testados na bateria de testes: **A\***, **Hybrid A\***, **Dijkstra**, **Lazy Theta\***, **D\* Lite**, **RRT**, **APF** (Artificial Potential Field) e **DWA** (Dynamic Window Approach).
+This document describes the important parameters of the path planning algorithms implemented in this project. It includes the algorithms tested in the benchmark suite: **A\***, **Hybrid A\***, **Dijkstra**, **Lazy Theta\***, **D\* Lite**, **RRT**, **APF** (Artificial Potential Field), and **DWA** (Dynamic Window Approach).
 
 ---
 
-## Índice
+## Index
 
 1. [A* (A-Star)](#1-a-a-star)
 2. [Hybrid A*](#2-hybrid-a)
@@ -14,67 +14,67 @@ Este documento descreve os parâmetros importantes dos algoritmos de planejament
 6. [APF (Artificial Potential Field)](#6-apf-artificial-potential-field)
 7. [DWA (Dynamic Window Approach)](#7-dwa-dynamic-window-approach)
 8. [RRT (Rapidly-exploring Random Tree)](#8-rrt-rapidly-exploring-random-tree)
-9. [Parâmetros Gerais do Sistema](#9-parâmetros-gerais-do-sistema)
+9. [General System Parameters](#9-general-system-parameters)
 
 ---
 
 ## 1. A* (A-Star)
 
-### Descrição
-O algoritmo A* é um algoritmo de busca em grafo que encontra o caminho mais curto entre dois pontos usando uma função heurística. Nesta implementação, o A* não possui parâmetros específicos configuráveis, mas utiliza parâmetros gerais do sistema.
+### Description
+The A* algorithm is a graph search algorithm that finds the shortest path between two points using a heuristic function. In this implementation, A* does not have specific configurable parameters but uses the general system parameters.
 
-### Localização do Código
-- **Implementação**: `src/core/path_planner/path_planner/src/graph_planner/astar_planner.cpp`
-- **Cabeçalho**: `src/core/path_planner/path_planner/include/path_planner/graph_planner/astar_planner.h`
+### Code Location
+- **Implementation**: `src/core/path_planner/path_planner/src/graph_planner/astar_planner.cpp`
+- **Header**: `src/core/path_planner/path_planner/include/path_planner/graph_planner/astar_planner.h`
 
-### Parâmetros Utilizados
+### Parameters Used
 
-O A* utiliza apenas os parâmetros gerais do path planner:
+A* uses only the general path planner parameters:
 
-| Parâmetro | Localização | Valor Padrão | Descrição |
+| Parameter | Location | Default Value | Description |
 |-----------|-------------|--------------|-----------|
-| `obstacle_inflation_factor` | `system_config.pb.txt` | `0.5` | Fator de inflação de obstáculos usado para verificação de colisão |
+| `obstacle_inflation_factor` | `system_config.pb.txt` | `0.5` | Obstacle inflation factor used for collision checking |
 
-### Observações
-- O A* usa movimentos em 8 direções (4 cardinais + 4 diagonais)
-- A heurística utilizada é a distância euclidiana
-- Pode ser configurado para funcionar como Dijkstra (`dijkstra=true`) ou GBFS (`gbfs=true`)
+### Remarks
+- A* uses 8-direction movement (4 cardinal + 4 diagonal)
+- The heuristic used is the Euclidean distance
+- Can be configured to function as Dijkstra (`dijkstra=true`) or GBFS (`gbfs=true`)
 
 ---
 
 ## 2. Hybrid A*
 
-### Descrição
-O Hybrid A* é uma extensão do A* que considera restrições de movimento do veículo (como raio mínimo de giro), gerando trajetórias suaves usando modelos de movimento Dubins ou Reeds-Shepp.
+### Description
+Hybrid A* is an extension of A* that considers vehicle movement constraints (such as minimum turning radius), generating smooth trajectories using Dubins or Reeds-Shepp motion models.
 
-### Localização dos Parâmetros
-- **Arquivo de Configuração**: `src/core/system_config/system_config/system_config.pb.txt` (linhas 12-30)
-- **Definição Protobuf**: `src/core/system_config/system_config/path_planner_protos/graph_planner/hybrid_astar_planner.proto`
-- **Implementação**: `src/core/path_planner/path_planner/src/graph_planner/hybrid_astar_planner/hybrid_astar_planner.cpp`
+### Parameter Location
+- **Configuration File**: `src/core/system_config/system_config/system_config.pb.txt` (lines 12-30)
+- **Protobuf Definition**: `src/core/system_config/system_config/path_planner_protos/graph_planner/hybrid_astar_planner.proto`
+- **Implementation**: `src/core/path_planner/path_planner/src/graph_planner/hybrid_astar_planner/hybrid_astar_planner.cpp`
 
-### Parâmetros
+### Parameters
 
-| Parâmetro | Tipo | Valor Padrão | Unidade | Descrição |
+| Parameter | Type | Default Value | Unit | Description |
 |-----------|------|--------------|---------|-----------|
-| `motion_model` | `enum` | `DUBINS_UNSPECIFIED` | - | Modelo de movimento: `DUBINS_UNSPECIFIED` (0) ou `REEDS_SHEPP` (1) |
-| `goal_tolerance` | `double` | `0.125` | metros | Tolerância de distância ao objetivo |
-| `dim_3_size` | `int64` | `64` | - | Dimensões auxiliares para busca (discretização angular) |
-| `max_iterations` | `int64` | `1000000` | - | Número máximo de iterações durante a expansão da busca |
-| `max_approach_iterations` | `int64` | `1000` | - | Número máximo de iterações durante a busca próxima ao objetivo |
-| `traverse_unknown` | `bool` | `false` | - | Permitir busca em espaço desconhecido (útil para navegação durante mapeamento) |
-| `curve_sample_ratio` | `double` | `0.15` | - | Razão de amostragem para geração de curvas |
-| `minimum_turning_radius` | `double` | `0.4` | metros | Raio mínimo de giro do veículo |
-| `non_straight_penalty` | `double` | `1.20` | - | Penalidade para movimentos não retilíneos (deve ser ≥ 1) |
-| `change_penalty` | `double` | `0.0` | - | Penalidade para mudança de direção (deve ser ≥ 0) |
-| `reverse_penalty` | `double` | `2.1` | - | Penalidade para movimento reverso (deve ser ≥ 1) |
-| `retrospective_penalty` | `double` | `0.025` | - | Penalidade para preferir manobras posteriores antes de anteriores ao longo do caminho |
-| `lookup_table_dim` | `int64` | `20` | - | Tamanho da janela de distância Dubins/Reeds-Shepp para cache [m] |
-| `analytic_expansion_ratio` | `double` | `3.5` | - | Razão para tentar expansões analíticas durante a busca para abordagem final |
-| `analytic_expansion_max_length` | `double` | `3.0` | metros | Comprimento máximo da expansão analítica a ser considerada válida |
-| `lamda_h` | `double` | `2.5` | - | Peso da heurística (lambda) |
-| `default_graph_size` | `int64` | `100000` | - | Tamanho padrão do grafo |
+| `motion_model` | `enum` | `DUBINS_UNSPECIFIED` | - | Motion model: `DUBINS_UNSPECIFIED` (0) or `REEDS_SHEPP` (1) |
+| `goal_tolerance` | `double` | `0.125` | meters | Distance tolerance to the goal |
+| `dim_3_size` | `int64` | `64` | - | Auxiliary dimensions for search (angular discretization) |
+| `max_iterations` | `int64` | `1000000` | - | Maximum number of iterations during search expansion |
+| `max_approach_iterations` | `int64` | `1000` | - | Maximum iterations during search near the goal |
+| `traverse_unknown` | `bool` | `false` | - | Allow search in unknown space (useful during mapping) |
+| `curve_sample_ratio` | `double` | `0.15` | - | Sampling ratio for curve generation |
+| `minimum_turning_radius` | `double` | `0.4` | meters | Minimum turning radius of the vehicle |
+| `non_straight_penalty` | `double` | `1.20` | - | Penalty for non-straight movements (must be ≥ 1) |
+| `change_penalty` | `double` | `0.0` | - | Penalty for direction change (must be ≥ 0) |
+| `reverse_penalty` | `double` | `2.1` | - | Penalty for reverse movement (must be ≥ 1) |
+| `retrospective_penalty` | `double` | `0.025` | - | Penalty to prefer later maneuvers over earlier ones along the path |
+| `lookup_table_dim` | `int64` | `20` | - | Dubins/Reeds-Shepp distance window size for cache [m] |
+| `analytic_expansion_ratio` | `double` | `3.5` | - | Ratio to attempt analytic expansions during search for final approach |
+| `analytic_expansion_max_length` | `double` | `3.0` | meters | Maximum length of analytic expansion to be considered valid |
+| `lamda_h` | `double` | `2.5` | - | Heuristic weight (lambda) |
+| `default_graph_size` | `int64` | `100000` | - | Default graph size |
 
-### Exemplo de Configuração
+### Configuration Example
 
 ```protobuf
 graph_planner {
@@ -100,138 +100,138 @@ graph_planner {
 }
 ```
 
-### Dicas de Ajuste
-- **`minimum_turning_radius`**: Deve corresponder às características físicas do robô
-- **`reverse_penalty`**: Valores maiores desencorajam movimento reverso
-- **`max_iterations`**: Aumentar pode melhorar a qualidade do caminho, mas aumenta o tempo de cálculo
-- **`dim_3_size`**: Controla a discretização angular. Valores maiores = mais precisão, mas mais custo computacional
+### Tuning Tips
+- **`minimum_turning_radius`**: Should match the physical characteristics of the robot.
+- **`reverse_penalty`**: Higher values discourage reverse movement.
+- **`max_iterations`**: Increasing can improve path quality but increases calculation time.
+- **`dim_3_size`**: Controls angular discretization. Higher values = more precision but more computational cost.
 
 ---
 
 ## 3. Dijkstra
 
-### Descrição
-O algoritmo Dijkstra é uma variante do A* que não utiliza heurística (h=0), garantindo encontrar o caminho de menor custo, mas geralmente explorando mais nós.
+### Description
+The Dijkstra algorithm is a variant of A* that does not use a heuristic (h=0), ensuring the lowest cost path is found, but generally exploring more nodes.
 
-### Localização do Código
-- **Implementação**: Usa a mesma classe `AStarPathPlanner` com flag `dijkstra=true`
-- **Código**: `src/core/path_planner/path_planner/src/graph_planner/astar_planner.cpp`
+### Code Location
+- **Implementation**: Uses the same `AStarPathPlanner` class with the `dijkstra=true` flag.
+- **Code**: `src/core/path_planner/path_planner/src/graph_planner/astar_planner.cpp`
 
-### Parâmetros Utilizados
+### Parameters Used
 
-O Dijkstra utiliza apenas os parâmetros gerais do path planner (mesmos do A*):
+Dijkstra uses only the general path planner parameters (same as A*):
 
-| Parâmetro | Localização | Valor Padrão | Descrição |
+| Parameter | Location | Default Value | Description |
 |-----------|-------------|--------------|-----------|
-| `obstacle_inflation_factor` | `system_config.pb.txt` | `0.5` | Fator de inflação de obstáculos usado para verificação de colisão |
+| `obstacle_inflation_factor` | `system_config.pb.txt` | `0.5` | Obstacle inflation factor used for collision checking |
 
-### Observações
-- O Dijkstra é implementado como uma variante do A* (mesma classe, flag diferente)
-- Não utiliza heurística, então sempre encontra o caminho ótimo, mas pode ser mais lento
-- Usa movimentos em 8 direções (4 cardinais + 4 diagonais)
+### Remarks
+- Dijkstra is implemented as a variant of A* (same class, different flag).
+- It does not use a heuristic, so it always finds the optimal path but can be slower.
+- Uses 8-direction movement (4 cardinal + 4 diagonal).
 
 ---
 
 ## 4. Lazy Theta*
 
-### Descrição
-O Lazy Theta* é uma variante do Theta* que verifica colisões de forma "preguiçosa" (lazy), melhorando a eficiência computacional.
+### Description
+Lazy Theta* is a variant of Theta* that checks collisions in a "lazy" manner, improving computational efficiency by only validating line-of-sight when necessary.
 
-### Localização do Código
-- **Implementação**: `src/core/path_planner/path_planner/src/graph_planner/lazy_theta_star_planner.cpp`
-- **Cabeçalho**: `src/core/path_planner/path_planner/include/path_planner/graph_planner/lazy_theta_star_planner.h`
+### Code Location
+- **Implementation**: `src/core/path_planner/path_planner/src/graph_planner/lazy_theta_star_planner.cpp`
+- **Header**: `src/core/path_planner/path_planner/include/path_planner/graph_planner/lazy_theta_star_planner.h`
 
-### Parâmetros Utilizados
+### Parameters Used
 
-O Lazy Theta* utiliza apenas os parâmetros gerais do path planner:
+Lazy Theta* uses only the general path planner parameters:
 
-| Parâmetro | Localização | Valor Padrão | Descrição |
+| Parameter | Location | Default Value | Description |
 |-----------|-------------|--------------|-----------|
-| `obstacle_inflation_factor` | `system_config.pb.txt` | `0.5` | Fator de inflação de obstáculos usado para verificação de colisão |
+| `obstacle_inflation_factor` | `system_config.pb.txt` | `0.5` | Obstacle inflation factor used for collision checking |
 
-### Observações
-- Herda de `ThetaStarPathPlanner`
-- Não possui parâmetros específicos configuráveis
-- Verifica colisões de forma lazy (apenas quando necessário), melhorando performance
+### Remarks
+- Inherits from `ThetaStarPathPlanner`.
+- Does not have specific configurable parameters in the config file.
+- Checks collisions lazily (only when needed), improving performance.
 
 ---
 
 ## 5. D* Lite
 
-### Descrição
-O D* Lite é um algoritmo de planejamento incremental que pode replanejar eficientemente quando o ambiente muda, sendo útil para navegação em ambientes dinâmicos.
+### Description
+D* Lite is an incremental planning algorithm that can replan efficiently when the environment changes, making it useful for navigation in dynamic environments.
 
-### Localização do Código
-- **Implementação**: `src/core/path_planner/path_planner/src/graph_planner/dstar_lite_planner.cpp`
-- **Cabeçalho**: `src/core/path_planner/path_planner/include/path_planner/graph_planner/dstar_lite_planner.h`
+### Code Location
+- **Implementation**: `src/core/path_planner/path_planner/src/graph_planner/dstar_lite_planner.cpp`
+- **Header**: `src/core/path_planner/path_planner/include/path_planner/graph_planner/dstar_lite_planner.h`
 
-### Parâmetros Utilizados
+### Parameters Used
 
-O D* Lite utiliza apenas os parâmetros gerais do path planner:
+D* Lite uses only the general path planner parameters:
 
-| Parâmetro | Localização | Valor Padrão | Descrição |
+| Parameter | Location | Default Value | Description |
 |-----------|-------------|--------------|-----------|
-| `obstacle_inflation_factor` | `system_config.pb.txt` | `0.5` | Fator de inflação de obstáculos usado para verificação de colisão |
+| `obstacle_inflation_factor` | `system_config.pb.txt` | `0.5` | Obstacle inflation factor used for collision checking |
 
-### Observações
-- Não possui parâmetros específicos configuráveis
-- Mantém uma janela local do costmap (tamanho fixo: 70 células = 3.5m / 0.05m resolução)
-- Eficiente para replanejamento quando o ambiente muda
+### Remarks
+- Does not have specific configurable parameters.
+- Maintains a local window of the costmap (fixed size: 70 cells = 3.5m / 0.05m resolution).
+- Efficient for replanning when the environment changes.
 
 ---
 
 ## 6. APF (Artificial Potential Field)
 
-### Descrição
-O algoritmo APF utiliza campos de potencial artificial para guiar o robô em direção ao objetivo (força atrativa) e afastá-lo de obstáculos (força repulsiva).
+### Description
+The APF algorithm uses artificial potential fields to guide the robot towards the goal (attractive force) and away from obstacles (repulsive force).
 
-### Localização dos Parâmetros
-- **Arquivo de Configuração**: `src/core/system_config/system_config/system_config.pb.txt` (linhas 150-157)
-- **Definição Protobuf**: `src/core/system_config/system_config/controller_protos/apf_controller.proto`
+### Parameter Location
+- **Configuration File**: `src/core/system_config/system_config/system_config.pb.txt` (lines 150-157)
+- **Protobuf Definition**: `src/core/system_config/system_config/controller_protos/apf_controller.proto`
 
-### Parâmetros
+### Parameters
 
-| Parâmetro | Tipo | Valor Padrão | Unidade | Descrição |
+| Parameter | Type | Default Value | Unit | Description |
 |-----------|------|--------------|---------|-----------|
-| `lookahead_time` | `double` | `1.0` | segundos | Tempo de lookahead para previsão da trajetória |
-| `min_lookahead_dist` | `double` | `0.3` | metros | Distância mínima de lookahead |
-| `max_lookahead_dist` | `double` | `0.9` | metros | Distância máxima de lookahead |
-| `smooth_window` | `int64` | `5` | - | Janela de tempo para suavização da trajetória |
-| `weight_attractive_force` | `double` | `1.0` | - | Fator de escala da força atrativa (atração ao objetivo) |
-| `weight_repulsive_force` | `double` | `3.0` | - | **Repulsion Gain (krep)**: Fator de escala global da força repulsiva (repulsão de obstáculos) |
+| `lookahead_time` | `double` | `1.0` | seconds | Lookahead time for trajectory prediction |
+| `min_lookahead_dist` | `double` | `0.3` | meters | Minimum lookahead distance |
+| `max_lookahead_dist` | `double` | `0.9` | meters | Maximum lookahead distance |
+| `smooth_window` | `int64` | `5` | - | Time window for trajectory smoothing |
+| `weight_attractive_force` | `double` | `1.0` | - | Attractive force scaling factor (attraction to goal) |
+| `weight_repulsive_force` | `double` | `3.0` | - | **Repulsion Gain (krep)**: Global repulsive force scaling factor (obstacle repulsion) |
 
 ### Repulsion Gain (krep) Based on Distance
 
-O **Repulsion Gain (krep)** no APF é calculado de forma **dinâmica baseada na distância** ao obstáculo, e depois multiplicado pelo ganho global `weight_repulsive_force`.
+The **Repulsion Gain (krep)** in APF is calculated **dynamically based on the distance** to the obstacle and then multiplied by the global gain `weight_repulsive_force`.
 
-**Fórmula do krep baseado em distância:**
+**Distance-based krep formula:**
 ```cpp
 k = (1.0 - 1.0 / dist) / (dist * dist)
 ```
 
-Onde:
-- `dist`: Distância normalizada ao obstáculo (0 = no obstáculo, 1 = longe do obstáculo)
-- `k`: Ganho repulsivo calculado dinamicamente
+Where:
+- `dist`: Normalized distance to the obstacle (0 = at obstacle, 1 = far from obstacle)
+- `k`: Dynamically calculated repulsive gain
 
-**Força repulsiva final:**
+**Final repulsive force:**
 ```cpp
 rep_force = k * grad_dist
 net_force = weight_attractive_force * attr_force + 
             weight_repulsive_force * rep_force
 ```
 
-**Características:**
-- O ganho `k` é **inversamente proporcional ao quadrado da distância**
-- Quando próximo ao obstáculo (`dist → 0`), `k → ∞` (força repulsiva muito alta)
-- Quando longe do obstáculo (`dist → 1`), `k → 0` (força repulsiva baixa)
-- O parâmetro `weight_repulsive_force` (padrão: **3.0**) multiplica toda a força repulsiva
+### Characteristics
+- The gain `k` is **inversely proportional to the square of the distance**.
+- When near an obstacle (`dist → 0`), `k → ∞` (very high repulsive force).
+- When far from an obstacle (`dist → 1`), `k → 0` (low repulsive force).
+- The `weight_repulsive_force` parameter (default: **3.0**) multiplies the entire repulsive force.
 
-**Recomendações:**
-- **`weight_repulsive_force` baixo (1.0-2.0)**: Robô menos cauteloso, pode passar muito perto de obstáculos
-- **`weight_repulsive_force` médio (3.0-5.0)**: Balance entre segurança e eficiência
-- **`weight_repulsive_force` alto (>5.0)**: Robô muito cauteloso, pode ter dificuldade em passar por corredores estreitos
+### Recommendations
+- **Low `weight_repulsive_force` (1.0-2.0)**: Less cautious robot, may pass very close to obstacles.
+- **Medium `weight_repulsive_force` (3.0-5.0)**: Balance between safety and efficiency.
+- **High `weight_repulsive_force` (>5.0)**: Very cautious robot, may struggle to pass through narrow corridors.
 
-### Exemplo de Configuração
+### Configuration Example
 
 ```protobuf
 apf_controller {
@@ -244,108 +244,108 @@ apf_controller {
 }
 ```
 
-### Dicas de Ajuste
-- **`weight_repulsive_force`**: Aumentar este valor torna o robô mais cauteloso com obstáculos, mas pode causar oscilações
-- **`weight_attractive_force`**: Controla a força de atração ao objetivo
-- **`smooth_window`**: Valores maiores resultam em trajetórias mais suaves, mas podem aumentar a latência
+### Tuning Tips
+- **`weight_repulsive_force`**: Increasing this value makes the robot more cautious with obstacles but can cause oscillations.
+- **`weight_attractive_force`**: Controls the force of attraction to the goal.
+- **`smooth_window`**: Higher values result in smoother trajectories but may increase latency.
 
 ---
 
 ## 7. DWA (Dynamic Window Approach)
 
-### Descrição
-O DWA é um algoritmo de planejamento local que seleciona velocidades seguras dentro de uma janela dinâmica, considerando as limitações de aceleração do robô.
+### Description
+DWA is a local planning algorithm that selects safe velocities within a dynamic window, considering the robot's acceleration limits.
 
-### Localização dos Parâmetros
-- **Arquivo de Configuração**: `src/core/controller/dwa_controller/cfg/DWAController.cfg`
-- **Implementação**: `src/core/controller/dwa_controller/src/dwa.cpp`
+### Parameter Location
+- **Configuration File**: `src/core/controller/dwa_controller/cfg/DWAController.cfg`
+- **Implementation**: `src/core/controller/dwa_controller/src/dwa.cpp`
 
-### Parâmetros Específicos do DWA
+### DWA Specific Parameters
 
-| Parâmetro | Tipo | Valor Padrão | Unidade | Descrição |
+| Parameter | Type | Default Value | Unit | Description |
 |-----------|------|--------------|---------|-----------|
-| `sim_time` | `double` | `1.7` | segundos | Tempo de simulação para rolar trajetórias |
-| `sim_granularity` | `double` | `0.025` | metros | Granularidade para verificação de colisões ao longo da trajetória |
-| `angular_sim_granularity` | `double` | `0.1` | radianos | Granularidade para verificação de colisões em rotações |
-| `path_distance_bias` | `double` | `0.6` | - | Peso para a distância do caminho na função de custo |
-| `goal_distance_bias` | `double` | `0.8` | - | Peso para a distância ao objetivo na função de custo |
-| `occdist_scale` | `double` | `0.01` | - | Peso para a distância de obstáculos na função de custo |
-| `twirling_scale` | `double` | `0.0` | - | Peso para penalizar mudanças no heading do robô |
-| `stop_time_buffer` | `double` | `0.2` | segundos | Tempo que o robô deve parar antes de uma colisão para considerar a trajetória válida |
-| `oscillation_reset_dist` | `double` | `0.05` | metros | Distância que o robô deve percorrer antes de resetar flags de oscilação |
-| `oscillation_reset_angle` | `double` | `0.2` | radianos | Ângulo que o robô deve girar antes de resetar flags de oscilação |
-| `forward_point_distance` | `double` | `0.325` | metros | Distância do centro do robô para colocar um ponto adicional de pontuação |
-| `scaling_speed` | `double` | `0.25` | m/s | Valor absoluto da velocidade para começar a escalar o footprint do robô |
-| `max_scaling_factor` | `double` | `0.2` | - | Fator máximo para escalar o footprint do robô |
-| `vx_samples` | `int` | `3` | - | Número de amostras para explorar o espaço de velocidade x |
-| `vy_samples` | `int` | `10` | - | Número de amostras para explorar o espaço de velocidade y |
-| `vth_samples` | `int` | `20` | - | Número de amostras para explorar o espaço de velocidade angular (theta) |
-| `use_dwa` | `bool` | `True` | - | Usar abordagem de janela dinâmica para restringir velocidades de amostragem |
+| `sim_time` | `double` | `1.7` | seconds | Simulation time to roll out trajectories |
+| `sim_granularity` | `double` | `0.025` | meters | Granularity for collision checking along the trajectory |
+| `angular_sim_granularity` | `double` | `0.1` | radians | Granularity for collision checking during rotations |
+| `path_distance_bias` | `double` | `0.6` | - | Weight for path distance in the cost function |
+| `goal_distance_bias` | `double` | `0.8` | - | Weight for goal distance in the cost function |
+| `occdist_scale` | `double` | `0.01` | - | Weight for obstacle distance in the cost function |
+| `twirling_scale` | `double` | `0.0` | - | Weight to penalize changes in robot heading |
+| `stop_time_buffer` | `double` | `0.2` | seconds | Time the robot should stop before a collision for the trajectory to be valid |
+| `oscillation_reset_dist` | `double` | `0.05` | meters | Distance the robot must travel before resetting oscillation flags |
+| `oscillation_reset_angle` | `double` | `0.2` | radians | Angle the robot must turn before resetting oscillation flags |
+| `forward_point_distance` | `double` | `0.325` | meters | Distance from the robot center to place an additional scoring point |
+| `scaling_speed` | `double` | `0.25` | m/s | Speed value to start scaling the robot footprint |
+| `max_scaling_factor` | `double` | `0.2` | - | Maximum factor to scale the robot footprint |
+| `vx_samples` | `int` | `3` | - | Number of samples to explore the x-velocity space |
+| `vy_samples` | `int` | `10` | - | Number of samples to explore the y-velocity space |
+| `vth_samples` | `int` | `20` | - | Number of samples to explore the angular velocity space |
+| `use_dwa` | `bool` | `True` | - | Use the dynamic window approach to restrict sampling velocities |
 
-### Parâmetros Genéricos do Local Planner
+### Generic Local Planner Parameters
 
-O DWA também utiliza parâmetros genéricos do local planner (definidos via `add_generic_localplanner_params`):
+DWA also uses generic local planner parameters (defined via `add_generic_localplanner_params`):
 
-- `max_vel_trans`, `min_vel_trans`: Velocidades translacionais máxima e mínima
-- `max_vel_x`, `min_vel_x`: Velocidades em x máxima e mínima
-- `max_vel_y`, `min_vel_y`: Velocidades em y máxima e mínima
-- `max_vel_theta`, `min_vel_theta`: Velocidades angulares máxima e mínima
-- `acc_lim_x`, `acc_lim_y`, `acc_lim_theta`, `acc_lim_trans`: Limites de aceleração
-- `xy_goal_tolerance`, `yaw_goal_tolerance`: Tolerâncias para alcançar o objetivo
-- `prune_plan`: Se deve podar o plano
-- `trans_stopped_vel`, `theta_stopped_vel`: Velocidades consideradas como paradas
+- `max_vel_trans`, `min_vel_trans`: Maximum and minimum translational velocities.
+- `max_vel_x`, `min_vel_x`: Maximum and minimum x-velocities.
+- `max_vel_y`, `min_vel_y`: Maximum and minimum y-velocities.
+- `max_vel_theta`, `min_vel_theta`: Maximum and minimum angular velocities.
+- `acc_lim_x`, `acc_lim_y`, `acc_lim_theta`, `acc_lim_trans`: Acceleration limits.
+- `xy_goal_tolerance`, `yaw_goal_tolerance`: Tolerances for reaching the goal.
+- `prune_plan`: Whether to prune the plan.
+- `trans_stopped_vel`, `theta_stopped_vel`: Velocities considered as stopped.
 
-### Dicas de Ajuste
-- **`sim_time`**: Aumentar permite prever mais à frente, mas aumenta o tempo de cálculo
-- **`path_distance_bias` vs `goal_distance_bias`**: Balancear entre seguir o caminho global e ir direto ao objetivo
-- **`occdist_scale`**: Valores maiores tornam o robô mais cauteloso com obstáculos
-- **`vx_samples`, `vth_samples`**: Mais amostras melhoram a qualidade, mas aumentam o tempo de cálculo
+### Tuning Tips
+- **`sim_time`**: Increasing allows looking further ahead but increases calculation time.
+- **`path_distance_bias` vs `goal_distance_bias`**: Balance between following the global path and going straight to the goal.
+- **`occdist_scale`**: Higher values make the robot more cautious with obstacles.
+- **`vx_samples`, `vth_samples`**: More samples improve quality but increase calculation time.
 
 ---
 
 ## 8. RRT (Rapidly-exploring Random Tree)
 
-### Descrição
-O RRT é um algoritmo de planejamento probabilístico que constrói uma árvore de exploração aleatória no espaço de configuração.
+### Description
+RRT is a probabilistic planning algorithm that builds a random exploration tree in the configuration space.
 
-### Localização dos Parâmetros
-- **Arquivo de Configuração**: `src/core/system_config/system_config/system_config.pb.txt` (linhas 33-38)
-- **Definição Protobuf**: `src/core/system_config/system_config/path_planner_protos/sample_planner/sample_planner.proto`
-- **Implementação**: `src/core/path_planner/path_planner/src/sample_planner/rrt_planner.cpp`
+### Parameter Location
+- **Configuration File**: `src/core/system_config/system_config/system_config.pb.txt` (lines 33-38)
+- **Protobuf Definition**: `src/core/system_config/system_config/path_planner_protos/sample_planner/sample_planner.proto`
+- **Implementation**: `src/core/path_planner/path_planner/src/sample_planner/rrt_planner.cpp`
 
-### Parâmetros
+### Parameters
 
-| Parâmetro | Tipo | Valor Padrão | Unidade | Descrição |
+| Parameter | Type | Default Value | Unit | Description |
 |-----------|------|--------------|---------|-----------|
-| `sample_points` | `int64` | `1500` | - | Número de pontos aleatórios a serem amostrados |
-| `sample_max_distance` | `double` | `30.0` | metros | Distância máxima entre pontos de amostra |
-| `optimization_radius` | `double` | `20.0` | metros | Raio de otimização para melhorar o caminho |
-| `optimization_sampe_probability` | `double` | `0.05` | - | **Goal Bias**: Probabilidade de amostrar diretamente o objetivo (0.0-1.0) |
+| `sample_points` | `int64` | `1500` | - | Number of random points to sample |
+| `sample_max_distance` | `double` | `30.0` | meters | Maximum distance between sample points |
+| `optimization_radius` | `double` | `20.0` | meters | Optimization radius to improve the path |
+| `optimization_sampe_probability` | `double` | `0.05` | - | **Goal Bias**: Probability of sampling the goal directly (0.0-1.0) |
 
 ### Goal Bias
 
-O **Goal Bias** no RRT é controlado pelo parâmetro `optimization_sampe_probability` com valor padrão de **0.05 (5%)**.
+**Goal Bias** in RRT is controlled by the `optimization_sampe_probability` parameter with a default value of **0.05 (5%)**.
 
-**Como funciona:**
-- A cada iteração, o algoritmo gera um número aleatório entre 0 e 1
-- Se o número for **≤ 0.05** (5% das vezes), o algoritmo amostra diretamente o objetivo
-- Caso contrário (95% das vezes), amostra um ponto aleatório no espaço de configuração
+**How it works:**
+- At each iteration, the algorithm generates a random number between 0 and 1.
+- If the number is **≤ 0.05** (5% of the time), the algorithm samples the goal directly.
+- Otherwise (95% of the time), it samples a random point in the configuration space.
 
-**Fórmula no código:**
+**Code Formula:**
 ```cpp
 if (p(eng) > config_.sample_planner().optimization_sampe_probability()) {
-    // Amostra ponto aleatório
+    // Sample random point
 } else {
-    // Amostra o objetivo diretamente
+    // Sample goal directly
 }
 ```
 
-**Recomendações:**
-- **Valores baixos (0.01-0.05)**: Exploração mais ampla, pode demorar mais para convergir
-- **Valores médios (0.1-0.2)**: Balance entre exploração e convergência
-- **Valores altos (>0.3)**: Convergência mais rápida, mas pode ficar preso em mínimos locais
+### Recommendations
+- **Low values (0.01-0.05)**: Broader exploration, may take longer to converge.
+- **Medium values (0.1-0.2)**: Balance between exploration and convergence.
+- **High values (>0.3)**: Faster convergence but may get stuck in local minima.
 
-### Exemplo de Configuração
+### Configuration Example
 
 ```protobuf
 sample_planner {
@@ -356,100 +356,100 @@ sample_planner {
 }
 ```
 
-### Parâmetros Adicionais Utilizados
+### Additional Parameters Used
 
-O RRT também utiliza parâmetros gerais do path planner:
+RRT also uses general path planner parameters:
 
-| Parâmetro | Valor Padrão | Descrição |
+| Parameter | Default Value | Description |
 |-----------|--------------|-----------|
-| `obstacle_inflation_factor` | `0.5` | Fator de inflação de obstáculos para verificação de colisão |
+| `obstacle_inflation_factor` | `0.5` | Obstacle inflation factor for collision checking |
 
-### Dicas de Ajuste
-- **`sample_points`**: Aumentar melhora a probabilidade de encontrar um caminho, mas aumenta o tempo de cálculo
-- **`sample_max_distance`**: Controla o tamanho dos passos da árvore. Valores menores resultam em exploração mais detalhada
-- **`optimization_sampe_probability`**: Probabilidade de amostrar diretamente o objetivo. Valores maiores (0.1-0.2) podem acelerar a convergência
-- **`optimization_radius`**: Usado por variantes do RRT (RRT*, Informed RRT) para otimização do caminho
+### Tuning Tips
+- **`sample_points`**: Increasing improves the probability of finding a path but increases calculation time.
+- **`sample_max_distance`**: Controls step sizes. Smaller values result in more detailed exploration.
+- **`optimization_sampe_probability`**: Probability of sampling the goal directly. Values of 0.1-0.2 can speed up convergence.
+- **`optimization_radius`**: Used by RRT variants (RRT*, Informed RRT) for path optimization.
 
 ---
 
-## 9. Parâmetros Gerais do Sistema
+## 9. General System Parameters
 
-### Parâmetros do Path Planner
+### Path Planner Parameters
 
-Localizados em `src/core/system_config/system_config/system_config.pb.txt`:
+Located in `src/core/system_config/system_config/system_config.pb.txt`:
 
-| Parâmetro | Valor Padrão | Descrição |
+| Parameter | Default Value | Description |
 |-----------|--------------|-----------|
-| `obstacle_inflation_factor` | `0.5` | Fator de inflação de obstáculos (usado por todos os planners) |
-| `convert_offset` | `0.0` | Offset de conversão |
-| `default_tolerance` | `0.0` | Tolerância padrão |
-| `expand_zone` | `true` | Expandir zona |
-| `show_safety_corridor` | `false` | Mostrar corredor de segurança |
-| `enable_resample` | `false` | Habilitar reamostragem |
-| `resample_ratio` | `0.5` | Razão de reamostragem |
-| `is_outline_map` | `true` | Se é mapa de contorno |
+| `obstacle_inflation_factor` | `0.5` | Obstacle inflation factor (used by all planners) |
+| `convert_offset` | `0.0` | Conversion offset |
+| `default_tolerance` | `0.0` | Default tolerance |
+| `expand_zone` | `true` | Expand zone |
+| `show_safety_corridor` | `false` | Show safety corridor |
+| `enable_resample` | `false` | Enable resampling |
+| `resample_ratio` | `0.5` | Resampling ratio |
+| `is_outline_map` | `true` | Whether it is an outline map |
 
-### Parâmetros do Controller Geral
+### General Controller Parameters
 
-Localizados em `src/core/system_config/system_config/system_config.pb.txt` (linhas 78-90):
+Located in `src/core/system_config/system_config/system_config.pb.txt` (lines 78-90):
 
-| Parâmetro | Valor Padrão | Unidade | Descrição |
+| Parameter | Default Value | Unit | Description |
 |-----------|--------------|---------|-----------|
-| `control_frequency` | `10.0` | Hz | Frequência de controle |
-| `goal_dist_tolerance` | `0.3` | metros | Tolerância de distância ao objetivo |
-| `rotate_tolerance` | `0.5` | radianos | Tolerância de rotação |
-| `max_linear_velocity` | `0.5` | m/s | Velocidade linear máxima |
-| `min_linear_velocity` | `0.0` | m/s | Velocidade linear mínima |
-| `max_linear_velocity_increment` | `0.5` | m/s | Incremento máximo de velocidade linear |
-| `max_angular_velocity` | `1.5` | rad/s | Velocidade angular máxima |
-| `min_angular_velocity` | `0.0` | rad/s | Velocidade angular mínima |
-| `max_angular_velocity_increment` | `1.5` | rad/s | Incremento máximo de velocidade angular |
+| `control_frequency` | `10.0` | Hz | Control frequency |
+| `goal_dist_tolerance` | `0.3` | meters | Distance tolerance to the goal |
+| `rotate_tolerance` | `0.5` | radians | Rotation tolerance |
+| `max_linear_velocity` | `0.5` | m/s | Maximum linear velocity |
+| `min_linear_velocity` | `0.0` | m/s | Minimum linear velocity |
+| `max_linear_velocity_increment` | `0.5` | m/s | Maximum linear velocity increment |
+| `max_angular_velocity` | `1.5` | rad/s | Maximum angular velocity |
+| `min_angular_velocity` | `0.0` | rad/s | Minimum angular velocity |
+| `max_angular_velocity_increment` | `1.5` | rad/s | Maximum angular velocity increment |
 
 ---
 
-## Como Modificar os Parâmetros
+## How to Modify Parameters
 
-### Para APF, RRT e Hybrid A*:
-1. Edite o arquivo: `src/core/system_config/system_config/system_config.pb.txt`
-2. Localize a seção correspondente:
-   - `apf_controller` para APF
-   - `sample_planner` para RRT
-   - `graph_planner.hybrid_astar_planner` para Hybrid A*
-3. Modifique os valores desejados
-4. Recompile o projeto
+### For APF, RRT, and Hybrid A*:
+1. Edit the file: `src/core/system_config/system_config/system_config.pb.txt`
+2. Locate the corresponding section:
+   - `apf_controller` for APF
+   - `sample_planner` for RRT
+   - `graph_planner.hybrid_astar_planner` for Hybrid A*
+3. Modify the desired values.
+4. Recompile the project.
 
-### Para DWA:
-1. Edite o arquivo: `src/core/controller/dwa_controller/cfg/DWAController.cfg`
-2. Modifique os valores padrão nas linhas `gen.add(...)`
-3. Recompile o projeto
-4. **Alternativamente**: Use `dynamic_reconfigure` durante a execução:
+### For DWA:
+1. Edit the file: `src/core/controller/dwa_controller/cfg/DWAController.cfg`
+2. Modify the default values in the `gen.add(...)` lines.
+3. Recompile the project.
+4. **Alternatively**: Use `dynamic_reconfigure` during execution:
    ```bash
    rosrun rqt_reconfigure rqt_reconfigure
    ```
 
-### Para A*:
-O A* não possui parâmetros específicos, mas você pode modificar:
-- `obstacle_inflation_factor` em `system_config.pb.txt` para ajustar a sensibilidade a obstáculos
+### For A*:
+A* does not have specific parameters, but you can adjust:
+- `obstacle_inflation_factor` in `system_config.pb.txt` to tune obstacle sensitivity.
 
 ---
 
-## Referências
+## References
 
-- **A***: Implementação baseada em busca heurística
-- **APF**: Campos de potencial artificial para navegação
-- **DWA**: Dynamic Window Approach para planejamento local
-- **RRT**: Rapidly-exploring Random Tree para planejamento probabilístico
-
----
-
-## Notas Finais
-
-- Todos os valores padrão são baseados na configuração atual do projeto
-- Parâmetros podem variar dependendo do tipo de robô e ambiente
-- Recomenda-se testar diferentes configurações para otimizar o desempenho
-- Use ferramentas de visualização (RViz) para observar o efeito das mudanças
+- **A***: Implementation based on heuristic search.
+- **APF**: Artificial potential fields for navigation.
+- **DWA**: Dynamic Window Approach for local planning.
+- **RRT**: Rapidly-exploring Random Tree for probabilistic planning.
 
 ---
 
-**Última atualização**: Baseado na análise do código-fonte do projeto
+## Final Notes
+
+- All default values are based on the current project configuration.
+- Parameters may vary depending on the robot type and environment.
+- It is recommended to test different configurations to optimize performance.
+- Use visualization tools (RViz) to observe the effect of changes.
+
+---
+
+**Last updated**: Based on project source code analysis
 

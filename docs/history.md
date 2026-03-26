@@ -17,3 +17,4 @@
 | 2024.1.7 | update Hybrid A* planner|
 | 2024.1.12 | update RPP and LQR planner|
 | 2024.1.16 | support docker-based ros motion planning |
+| 2026.3.26 | final research consolidation for Seed 15257: master summary integration, 300 DPI figure regeneration, and professional documentation sweep |
