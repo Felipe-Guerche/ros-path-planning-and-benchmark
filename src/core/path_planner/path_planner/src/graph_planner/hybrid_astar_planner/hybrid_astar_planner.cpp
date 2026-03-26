@@ -297,8 +297,8 @@ bool HybridAStarPathPlanner::precomputeObstacleHeuristic(
   const int width = costmap_->getSizeInCellsX();
   const int idx = grid2Index(goal->pose().x(), goal->pose().y());
 
-  if (isCollision(goal->pose())) {
-    R_ERROR << "Goal not in free space";
+  if (static_cast<int>(costmap_->getCharMap()[grid2Index(goal_x, goal_y)]) >= costmap_2d::LETHAL_OBSTACLE) {
+    R_ERROR << "Goal in lethal obstacle space";
     return false;
   }
 

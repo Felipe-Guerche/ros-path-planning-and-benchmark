@@ -68,16 +68,13 @@ bool LazyThetaStarPathPlanner::plan(const Point3d& start, const Point3d& goal,
     auto current = open_list.top();
     open_list.pop();
 
-    _setVertex(current);
-
-    if (current.g() >= std::numeric_limits<double>::max())
-      continue;
-
     // current node does not exist in closed list
     if (closed_list_.find(current.id()) != closed_list_.end())
       continue;
 
     closed_list_.insert(std::make_pair(current.id(), current));
+    _setVertex(current);
+
     expand->emplace_back(current.x(), current.y());
 
     // goal found

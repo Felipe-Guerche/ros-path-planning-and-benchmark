@@ -6,3 +6,4 @@ psutil
 setuptools
 catkin-tools
 conan==1.59.0
+seaborn

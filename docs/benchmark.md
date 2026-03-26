@@ -104,6 +104,12 @@ python scripts/analyze_results.py --results_dir ./results --plot --plot_dir ./re
 python scripts/analyze_results.py --summary_file ./results/battery_summary_20260310.csv --plot
 ```
 
+### 6. Publication-Ready Formatting
+The script `scripts/prepare_paper_results.py` is specialized for conference submissions:
+- **Merging**: Aggregates `backup_anomalies` and root CSVs for a clean `final_summary.csv`.
+- **LaTeX Snippets**: Auto-generates LaTeX `&` separated rows for Table II.
+- **Figures**: Generates high-DPI versions of Success Rates and the Heatmap Matrix.
+
 ---
 
 ## Configuration Reference
@@ -262,6 +268,8 @@ Each container gets:
 | `generate_random_poses.py` | Generate safe `(x, y)` pairs for Start and Goal |
 | `generate_pedestrian_config.py` | Generate starting locations for wandering pedestrians |
 | `analyze_results.py` | Aggregate CSVs, calculate stats, plot charts |
+| `prepare_paper_results.py` | **Publication engine**: Generates LaTeX tables and 300 DPI plots |
+| `run_fix_evaluation.sh` | **Targeted re-runs**: Evaluate specific planners with fixed seeds |
 | `cleanup_processes.sh` | Kill ROS/Gazebo processes between runs |
 | `launch_simulator.sh` | Launch ROS simulation stack |
 | `build.sh` | Build the catkin workspace |
