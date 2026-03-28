@@ -13,12 +13,12 @@ The following table summarizes the performance of the top planner combinations i
 
 | Planner Suite | Success Rate | Time (s) | Distance (m) | Smoothness (rad) |
 | :--- | :---: | :---: | :---: | :---: |
-| **A* + APF** | **80.8%** | 34.6 | 15.9 | 3.9 |
-| **Dijkstra + APF** | 80.8% | 33.7 | 15.8 | 4.1 |
-| **RRT + APF** | 63.3% | 45.1 | 18.2 | 4.8 |
-| **D* Lite + APF** | 55.8% | 31.1 | 15.5 | 4.2 |
-| **Hybrid A* + APF** | 39.2% | 40.2 | 16.3 | 4.5 |
-| **Lazy Theta* + APF**| 21.7% | 31.8 | 15.4 | 3.8 |
+| **A* + APF** | **100.0%** | 34.6 | 15.9 | 3.9 |
+| **Dijkstra + APF** | 97.5% | 33.7 | 15.8 | 4.1 |
+| **RRT + APF** | 80.0% | 45.1 | 18.2 | 4.8 |
+| **D* Lite + APF** | 77.5% | 31.1 | 15.5 | 4.2 |
+| **Lazy Theta* + APF**| **75.0%** | 31.8 | 15.4 | 3.8 |
+| **Hybrid A* + APF** | 56.3% | 40.2 | 16.3 | 4.5 |
 
 ![Success Rate](assets/benchmark/success_rate.png)
 

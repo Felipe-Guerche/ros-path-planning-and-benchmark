@@ -28,12 +28,12 @@ lazy_theta_star  153.0  59.193360  27.796715  19.6873  40.573700  53.82850  67.5
 rrt              470.0  54.607325  28.001872  13.0131  32.911050  49.20525  71.455425  166.3584
 
 --- 95% Bootstrap Confidence Intervals (Mean) ---
-  astar                                    | Mean=52.0235  95% CI: [49.4487, 54.7401]
-  dijkstra                                 | Mean=49.0405  95% CI: [46.0586, 52.1307]
-  dstar_lite                               | Mean=50.2610  95% CI: [46.8378, 53.8264]
-  hybrid_astar                             | Mean=64.2533  95% CI: [60.1912, 68.6073]
-  lazy_theta_star                          | Mean=59.1934  95% CI: [55.0127, 63.7608]
-  rrt                                      | Mean=54.6073  95% CI: [52.1273, 57.1580]
+  astar                                    | Mean=52.0235  95% CI: [49.4382, 54.7803]
+  dijkstra                                 | Mean=49.0405  95% CI: [46.0331, 52.1411]
+  dstar_lite                               | Mean=50.2610  95% CI: [46.9512, 53.7747]
+  hybrid_astar                             | Mean=64.2533  95% CI: [60.2777, 68.5980]
+  lazy_theta_star                          | Mean=59.1934  95% CI: [54.9806, 63.6120]
+  rrt                                      | Mean=54.6073  95% CI: [52.1062, 57.1485]
 
 === Shapiro-Wilk Normality Test (Time(s)) ===
 H0: Data is normally distributed (p > 0.05)
@@ -81,12 +81,12 @@ lazy_theta_star  153.0  15.381531   6.390071  5.3561  10.975600  14.46170  18.47
 rrt              470.0  19.867153  10.377635  5.2151  11.739200  17.87200  24.922875  72.3356
 
 --- 95% Bootstrap Confidence Intervals (Mean) ---
-  astar                                    | Mean=15.9419  95% CI: [15.3197, 16.5566]
-  dijkstra                                 | Mean=16.1024  95% CI: [15.3194, 16.8855]
-  dstar_lite                               | Mean=15.5004  95% CI: [14.7319, 16.2834]
-  hybrid_astar                             | Mean=16.2700  95% CI: [15.3961, 17.1525]
-  lazy_theta_star                          | Mean=15.3815  95% CI: [14.3891, 16.3801]
-  rrt                                      | Mean=19.8672  95% CI: [18.9602, 20.8161]
+  astar                                    | Mean=15.9419  95% CI: [15.3389, 16.5714]
+  dijkstra                                 | Mean=16.1024  95% CI: [15.3250, 16.9034]
+  dstar_lite                               | Mean=15.5004  95% CI: [14.7315, 16.2896]
+  hybrid_astar                             | Mean=16.2700  95% CI: [15.4085, 17.1745]
+  lazy_theta_star                          | Mean=15.3815  95% CI: [14.3853, 16.4012]
+  rrt                                      | Mean=19.8672  95% CI: [18.9471, 20.8307]
 
 === Shapiro-Wilk Normality Test (Distance(m)) ===
 H0: Data is normally distributed (p > 0.05)
@@ -134,12 +134,12 @@ lazy_theta_star  153.0  42.466780   73.174443  3.6925  13.97590  24.33470  42.35
 rrt              470.0  49.731980   39.174889  3.4433  23.27845  39.16645  65.75355   292.2096
 
 --- 95% Bootstrap Confidence Intervals (Mean) ---
-  astar                                    | Mean=51.2071  95% CI: [41.2565, 62.6837]
-  dijkstra                                 | Mean=46.7624  95% CI: [36.6160, 58.6273]
-  dstar_lite                               | Mean=56.4589  95% CI: [41.5856, 74.1715]
-  hybrid_astar                             | Mean=38.8430  95% CI: [33.3297, 45.6575]
-  lazy_theta_star                          | Mean=42.4668  95% CI: [32.2532, 54.9187]
-  rrt                                      | Mean=49.7320  95% CI: [46.2086, 53.3526]
+  astar                                    | Mean=51.2071  95% CI: [41.1953, 62.6503]
+  dijkstra                                 | Mean=46.7624  95% CI: [36.7443, 58.3130]
+  dstar_lite                               | Mean=56.4589  95% CI: [41.4240, 74.0916]
+  hybrid_astar                             | Mean=38.8430  95% CI: [33.4268, 45.5146]
+  lazy_theta_star                          | Mean=42.4668  95% CI: [32.0389, 55.2811]
+  rrt                                      | Mean=49.7320  95% CI: [46.2533, 53.4296]
 
 === Shapiro-Wilk Normality Test (Smoothness(rad)) ===
 H0: Data is normally distributed (p > 0.05)
@@ -187,12 +187,12 @@ lazy_theta_star  153.0  26.855359  11.446584   9.50  21.4800  23.340  26.5800   
 rrt              470.0  49.080532  35.479622   7.14  21.4075  36.095  80.9175  120.70
 
 --- 95% Bootstrap Confidence Intervals (Mean) ---
-  astar                                    | Mean=18.1306  95% CI: [17.4222, 18.8781]
-  dijkstra                                 | Mean=38.2402  95% CI: [36.6409, 39.8426]
-  dstar_lite                               | Mean=48.8454  95% CI: [46.9268, 50.7321]
-  hybrid_astar                             | Mean=26.4614  95% CI: [25.0280, 28.0074]
-  lazy_theta_star                          | Mean=26.8554  95% CI: [25.1647, 28.7621]
-  rrt                                      | Mean=49.0805  95% CI: [45.8783, 52.3554]
+  astar                                    | Mean=18.1306  95% CI: [17.4042, 18.8732]
+  dijkstra                                 | Mean=38.2402  95% CI: [36.6916, 39.8508]
+  dstar_lite                               | Mean=48.8454  95% CI: [46.9023, 50.7862]
+  hybrid_astar                             | Mean=26.4614  95% CI: [25.0444, 28.0108]
+  lazy_theta_star                          | Mean=26.8554  95% CI: [25.1596, 28.8287]
+  rrt                                      | Mean=49.0805  95% CI: [45.8127, 52.2708]
 
 === Shapiro-Wilk Normality Test (CPU(%)) ===
 H0: Data is normally distributed (p > 0.05)
@@ -240,12 +240,12 @@ lazy_theta_star  153.0  49.337059  23.731076  21.36  41.7100  42.320  44.1800  1
 rrt              470.0  41.470106   0.911578  36.33  40.7400  41.230  42.3175   43.11
 
 --- 95% Bootstrap Confidence Intervals (Mean) ---
-  astar                                    | Mean=44.3057  95% CI: [44.0672, 44.5422]
-  dijkstra                                 | Mean=46.7403  95% CI: [46.4494, 47.0385]
-  dstar_lite                               | Mean=61.6823  95% CI: [61.4793, 61.8744]
-  hybrid_astar                             | Mean=47.3996  95% CI: [45.0779, 50.0699]
-  lazy_theta_star                          | Mean=49.3371  95% CI: [45.8923, 53.3041]
-  rrt                                      | Mean=41.4701  95% CI: [41.3862, 41.5512]
+  astar                                    | Mean=44.3057  95% CI: [44.0671, 44.5507]
+  dijkstra                                 | Mean=46.7403  95% CI: [46.4463, 47.0393]
+  dstar_lite                               | Mean=61.6823  95% CI: [61.4817, 61.8800]
+  hybrid_astar                             | Mean=47.3996  95% CI: [45.1028, 50.0585]
+  lazy_theta_star                          | Mean=49.3371  95% CI: [45.8895, 53.2329]
+  rrt                                      | Mean=41.4701  95% CI: [41.3873, 41.5532]
 
 === Shapiro-Wilk Normality Test (Memory(MiB)) ===
 H0: Data is normally distributed (p > 0.05)
